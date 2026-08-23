@@ -1,0 +1,109 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.16 0.01 260);
+  --foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.20 0.012 260);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.20 0.012 260);
+  --popover-foreground: oklch(0.97 0.005 250);
+  --primary: oklch(0.72 0.15 235);
+  --primary-foreground: oklch(0.12 0.01 260);
+  --secondary: oklch(0.25 0.012 260);
+  --secondary-foreground: oklch(0.97 0.005 250);
+  --muted: oklch(0.22 0.01 260);
+  --muted-foreground: oklch(0.68 0.015 260);
+  --accent: oklch(0.28 0.02 260);
+  --accent-foreground: oklch(0.97 0.005 250);
+  --destructive: oklch(0.65 0.20 27);
+  --destructive-foreground: oklch(0.97 0.005 250);
+  --border: oklch(0.30 0.01 260 / 55%);
+  --input: oklch(0.28 0.01 260);
+  --ring: oklch(0.72 0.15 235);
+
+  /* Player colors — vibrant, clearly distinguishable, no neon. */
+  --p1: oklch(0.68 0.19 245);   /* blue */
+  --p2: oklch(0.64 0.22 27);    /* red */
+  --p3: oklch(0.76 0.19 145);   /* green */
+  --p4: oklch(0.66 0.20 305);   /* violet */
+  --p5: oklch(0.76 0.17 60);    /* orange */
+  --p6: oklch(0.80 0.14 200);   /* cyan */
+  --p7: oklch(0.74 0.18 350);   /* pink */
+  --p8: oklch(0.86 0.16 95);    /* yellow */
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  body { min-height: 100vh; }
+}
+
+/* Font display utility */
+.font-display { font-family: var(--font-display); letter-spacing: 0.01em; }
+
+/* Cluster rotates as a single unit — subtle, continuous. */
+@keyframes cluster-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Flying orb: travels from source cell center to neighbor cell center. */
+@keyframes orb-fly {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(var(--tx), var(--ty)); }
+}
+
+/* Chain banner: minimal, no neon. */
+@keyframes combo-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  15% { transform: scale(1); opacity: 1; }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.98); opacity: 0; }
+}
+.combo-banner { animation: combo-pop 1.2s ease-out forwards; }
+
+/* Shrink banner: sudden-death board contraction. */
+@keyframes shrink-flash {
+  0% { transform: scale(1.05); opacity: 0; }
+  20% { transform: scale(1); opacity: 1; }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+.shrink-banner { animation: shrink-flash 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; }

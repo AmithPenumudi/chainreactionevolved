@@ -18,5 +18,10 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ (API 31+) ignores android:background above and uses its
+             own native SplashScreen API instead — this is what actually controls
+             the background color on modern devices. The icon is auto-derived from
+             the adaptive launcher icon, which already renders correctly. -->
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
     </style>
 </resources>

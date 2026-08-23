@@ -180,7 +180,11 @@ export function canPlace(state: GameState, r: number, c: number): boolean {
   const p = state.players[state.currentPlayerIdx].id;
   const cell = state.board.cells[idx(state.board, r, c)];
   if (cell.tile === "wall" || cell.tile === "dead") return false;
-  if (cell.empLockedFor === p && cell.empLockedUntilTurn !== undefined && state.turn < cell.empLockedUntilTurn) {
+  if (
+    cell.empLockedFor === p &&
+    cell.empLockedUntilTurn !== undefined &&
+    state.turn < cell.empLockedUntilTurn
+  ) {
     return false;
   }
   return cell.owner === null || cell.owner === p;
@@ -278,8 +282,7 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
   const wasNotOwned = startCell.owner !== player;
   startCell.orbs += 1;
   startCell.owner = player;
-  const capturedPowerTiles =
-    startCell.tile === "power" && wasNotOwned ? 1 : 0;
+  const capturedPowerTiles = startCell.tile === "power" && wasNotOwned ? 1 : 0;
 
   const { steps, chainCount, capturedCells, eliminatedThisMove, winner } = resolveExplosions(
     state,
@@ -433,7 +436,11 @@ export function nextPlayerIdx(state: GameState): number {
 }
 
 /** Clears expired shields/EMPs for a player whose turn just began. */
-function clearExpiringModifiers(board: BoardState, forPlayer: PlayerId, currentTurn: number): BoardState {
+function clearExpiringModifiers(
+  board: BoardState,
+  forPlayer: PlayerId,
+  currentTurn: number,
+): BoardState {
   const b = cloneBoard(board);
   for (const cell of b.cells) {
     if (cell.shielded && cell.owner === forPlayer) {
@@ -472,7 +479,7 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
 
   // Determine whether the player keeps the turn (extra placement).
   let extraPlacementFor = state.extraPlacementFor;
-  let keepTurn = !!res.keepTurn;
+  const keepTurn = !!res.keepTurn;
   if (extraPlacementFor === res.player) {
     // Consumed an extra placement.
     extraPlacementFor = null;
@@ -506,7 +513,7 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     const nextPid = nextState.players[nextIdx].id;
 
     // Sweep expiring shields/EMPs for the incoming player.
-    let board = clearExpiringModifiers(nextState.board, nextPid, nextState.turn);
+    const board = clearExpiringModifiers(nextState.board, nextPid, nextState.turn);
 
     // Grant extra placement if this player has a stored power-tile bonus.
     let extra = nextState.extraPlacementFor;
@@ -560,9 +567,13 @@ export function applyShrink(state: GameState): GameState | null {
       newCells.push({ ...b.cells[r * b.cols + c] });
     }
   }
-  let board: BoardState = { rows: newRows, cols: newCols, cells: newCells };
+  const board: BoardState = { rows: newRows, cols: newCols, cells: newCells };
 
-  const { eliminatedThisMove: elimNew, capturedCells } = resolveExplosions(state, board, state.players[state.currentPlayerIdx].id);
+  const { eliminatedThisMove: elimNew, capturedCells } = resolveExplosions(
+    state,
+    board,
+    state.players[state.currentPlayerIdx].id,
+  );
   const eliminated = state.eliminated.slice();
   for (const pid of elimNew) eliminated[pid] = true;
 

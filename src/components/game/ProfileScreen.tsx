@@ -1,7 +1,15 @@
 import { useState } from "react";
 import {
-  ACHIEVEMENTS, AVATARS, MatchRecord, ModeStats, StatsMode, avatarFor,
-  favoriteAbility, levelInfo, totalStats, useProfile,
+  ACHIEVEMENTS,
+  AVATARS,
+  MatchRecord,
+  ModeStats,
+  StatsMode,
+  avatarFor,
+  favoriteAbility,
+  levelInfo,
+  totalStats,
+  useProfile,
 } from "@/game/profile";
 import { ABILITIES } from "@/game/abilities";
 
@@ -126,7 +134,11 @@ export function ProfileScreen({ onBack }: Props) {
                   }`}
                   style={
                     active
-                      ? { borderColor: a.colorVar, color: a.colorVar, background: `oklch(from ${a.colorVar} l c h / 0.12)` }
+                      ? {
+                          borderColor: a.colorVar,
+                          color: a.colorVar,
+                          background: `oklch(from ${a.colorVar} l c h / 0.12)`,
+                        }
                       : { color: a.colorVar }
                   }
                 >
@@ -142,7 +154,10 @@ export function ProfileScreen({ onBack }: Props) {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="GAMES" value={all.games} />
             <Stat label="WINS" value={all.wins} />
-            <Stat label="WIN RATE" value={`${all.games ? Math.round((all.wins / all.games) * 100) : 0}%`} />
+            <Stat
+              label="WIN RATE"
+              value={`${all.games ? Math.round((all.wins / all.games) * 100) : 0}%`}
+            />
             <Stat label="LARGEST CHAIN" value={all.largestChain} />
           </div>
         </Section>
@@ -155,7 +170,9 @@ export function ProfileScreen({ onBack }: Props) {
                 key={t.value}
                 onClick={() => setTab(t.value)}
                 className={`flex-1 rounded-sm px-2 py-1.5 text-[10px] tracking-[0.18em] transition ${
-                  tab === t.value ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+                  tab === t.value
+                    ? "bg-white/10 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t.label}
@@ -301,7 +318,9 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
       <div className="text-[9px] tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-lg">{typeof value === "number" ? value.toLocaleString() : value}</div>
+      <div className="mt-1 font-display text-lg">
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </div>
     </div>
   );
 }

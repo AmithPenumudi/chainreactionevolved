@@ -122,7 +122,11 @@ describe("rollPeriods", () => {
     const day1 = new Date(2026, 2, 5, 10).getTime();
     const day2 = new Date(2026, 2, 6, 10).getTime();
     let state = freshState(day1);
-    state = { ...state, progress: { [state.dailyIds[0]]: 5 }, claimed: { [state.dailyIds[0]]: false } };
+    state = {
+      ...state,
+      progress: { [state.dailyIds[0]]: 5 },
+      claimed: { [state.dailyIds[0]]: false },
+    };
 
     const rolled = rollPeriods(state, day2);
     expect(rolled.dailyKey).toBe(dailyKey(day2));

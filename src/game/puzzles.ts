@@ -127,8 +127,8 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "A corner bursts after just 2 orbs — yours already has 1.",
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // player corner (cap 2)
-      { row: 0, col: 1, owner: 1, orbs: 1 },  // opponent edge
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // player corner (cap 2)
+      { row: 0, col: 1, owner: 1, orbs: 1 }, // opponent edge
     ],
   },
 
@@ -139,7 +139,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "e-ripple",
     name: "RIPPLE",
-    brief: "Three edge cells in a row, all near their limit. Start the rightmost and the chain travels left.",
+    brief:
+      "Three edge cells in a row, all near their limit. Start the rightmost and the chain travels left.",
     difficulty: "easy",
     modeKind: "classic",
     rows: 5,
@@ -151,10 +152,10 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Drop an orb at the right end — explosions travel through neighboring loaded cells.",
     objective: { kind: "chain", minExplosions: 3 },
     cells: [
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap 2
-      { row: 0, col: 1, owner: 0, orbs: 2 },  // edge, cap 3
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // edge, cap 3
-      { row: 4, col: 4, owner: 1, orbs: 1 },  // opponent — context only
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap 2
+      { row: 0, col: 1, owner: 0, orbs: 2 }, // edge, cap 3
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // edge, cap 3
+      { row: 4, col: 4, owner: 1, orbs: 1 }, // opponent — context only
     ],
   },
 
@@ -177,9 +178,9 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Your loaded interior cell is one step from the target.",
     objective: { kind: "capture", row: 2, col: 4 },
     cells: [
-      { row: 2, col: 3, owner: 0, orbs: 3 },                     // player interior, cap 4
-      { row: 2, col: 4, owner: 1, orbs: 2, highlighted: true },  // opponent target, edge cap 3
-      { row: 0, col: 0, owner: 1, orbs: 1 },                     // opponent's extra cell (survives)
+      { row: 2, col: 3, owner: 0, orbs: 3 }, // player interior, cap 4
+      { row: 2, col: 4, owner: 1, orbs: 2, highlighted: true }, // opponent target, edge cap 3
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent's extra cell (survives)
     ],
   },
 
@@ -203,10 +204,10 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Each of your cells is primed right beside an opponent corner — fire both, one at a time.",
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
-      { row: 0, col: 0, owner: 1, orbs: 1 },  // opponent corner, cap 2
-      { row: 4, col: 0, owner: 1, orbs: 1 },  // opponent corner, cap 2
-      { row: 1, col: 0, owner: 0, orbs: 2 },  // player edge, cap 3
-      { row: 3, col: 0, owner: 0, orbs: 2 },  // player edge, cap 3
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent corner, cap 2
+      { row: 4, col: 0, owner: 1, orbs: 1 }, // opponent corner, cap 2
+      { row: 1, col: 0, owner: 0, orbs: 2 }, // player edge, cap 3
+      { row: 3, col: 0, owner: 0, orbs: 2 }, // player edge, cap 3
     ],
   },
 
@@ -228,12 +229,12 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "The center fires in all four directions at once — one orb is enough.",
     objective: { kind: "chain", minExplosions: 5 },
     cells: [
-      { row: 2, col: 2, owner: 0, orbs: 3 },  // center interior, cap 4
-      { row: 1, col: 2, owner: 0, orbs: 3 },  // north interior, cap 4
-      { row: 3, col: 2, owner: 0, orbs: 3 },  // south interior, cap 4
-      { row: 2, col: 1, owner: 0, orbs: 3 },  // west interior, cap 4
-      { row: 2, col: 3, owner: 0, orbs: 3 },  // east interior, cap 4
-      { row: 0, col: 4, owner: 1, orbs: 1 },  // opponent — context only
+      { row: 2, col: 2, owner: 0, orbs: 3 }, // center interior, cap 4
+      { row: 1, col: 2, owner: 0, orbs: 3 }, // north interior, cap 4
+      { row: 3, col: 2, owner: 0, orbs: 3 }, // south interior, cap 4
+      { row: 2, col: 1, owner: 0, orbs: 3 }, // west interior, cap 4
+      { row: 2, col: 3, owner: 0, orbs: 3 }, // east interior, cap 4
+      { row: 0, col: 4, owner: 1, orbs: 1 }, // opponent — context only
     ],
   },
 
@@ -247,7 +248,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "e-staged-blast",
     name: "STAGED BLAST",
-    brief: "The center needs one more orb before it can trigger the full chain. Load it first, then fire.",
+    brief:
+      "The center needs one more orb before it can trigger the full chain. Load it first, then fire.",
     difficulty: "easy",
     modeKind: "classic",
     rows: 5,
@@ -259,13 +261,13 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Move 1 adds a single orb to the center. Move 2 detonates from any loaded neighbor.",
     objective: { kind: "chain", minExplosions: 6 },
     cells: [
-      { row: 2, col: 2, owner: 0, orbs: 2 },  // center interior, needs 1 more to be ready
-      { row: 2, col: 1, owner: 0, orbs: 3 },  // west arm, interior cap 4
-      { row: 2, col: 3, owner: 0, orbs: 3 },  // east arm, interior cap 4
-      { row: 1, col: 2, owner: 0, orbs: 3 },  // north arm, interior cap 4
-      { row: 2, col: 0, owner: 0, orbs: 2 },  // far west, edge cap 3
-      { row: 2, col: 4, owner: 0, orbs: 2 },  // far east, edge cap 3
-      { row: 0, col: 0, owner: 1, orbs: 1 },  // opponent — context only
+      { row: 2, col: 2, owner: 0, orbs: 2 }, // center interior, needs 1 more to be ready
+      { row: 2, col: 1, owner: 0, orbs: 3 }, // west arm, interior cap 4
+      { row: 2, col: 3, owner: 0, orbs: 3 }, // east arm, interior cap 4
+      { row: 1, col: 2, owner: 0, orbs: 3 }, // north arm, interior cap 4
+      { row: 2, col: 0, owner: 0, orbs: 2 }, // far west, edge cap 3
+      { row: 2, col: 4, owner: 0, orbs: 2 }, // far east, edge cap 3
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent — context only
     ],
   },
 
@@ -292,11 +294,11 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Count only the non-wall neighbors to find the cell's true critical mass.",
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
-      { row: 2, col: 0, tile: "wall" },             // blocks left neighbor of player cell
-      { row: 2, col: 2, tile: "wall" },             // blocks right neighbor of player cell
-      { row: 2, col: 1, owner: 0, orbs: 1 },        // player — only 2 non-wall neighbors → cm=2
-      { row: 1, col: 1, owner: 1, orbs: 1 },        // opponent above
-      { row: 3, col: 1, owner: 1, orbs: 1 },        // opponent below
+      { row: 2, col: 0, tile: "wall" }, // blocks left neighbor of player cell
+      { row: 2, col: 2, tile: "wall" }, // blocks right neighbor of player cell
+      { row: 2, col: 1, owner: 0, orbs: 1 }, // player — only 2 non-wall neighbors → cm=2
+      { row: 1, col: 1, owner: 1, orbs: 1 }, // opponent above
+      { row: 3, col: 1, owner: 1, orbs: 1 }, // opponent below
     ],
   },
 
@@ -320,13 +322,13 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Your orb enters Portal A, teleports to Portal B, and detonates beside the highlighted cell.",
     objective: { kind: "capture", row: 4, col: 5 },
     cells: [
-      { row: 0, col: 0, tile: "portal", portalGroup: 1 },                              // portal A, empty
-      { row: 5, col: 5, tile: "portal", portalGroup: 1, owner: 0, orbs: 1 },          // portal B, player corner cap=2
-      { row: 0, col: 1, owner: 0, orbs: 2 },                                           // player edge, cap=3
-      { row: 1, col: 0, owner: 0, orbs: 2 },                                           // player edge, cap=3
-      { row: 4, col: 5, owner: 1, orbs: 2, highlighted: true },                       // target, edge cap=3
-      { row: 5, col: 4, owner: 1, orbs: 1 },                                           // opponent edge
-      { row: 3, col: 5, owner: 1, orbs: 1 },                                           // opponent — context
+      { row: 0, col: 0, tile: "portal", portalGroup: 1 }, // portal A, empty
+      { row: 5, col: 5, tile: "portal", portalGroup: 1, owner: 0, orbs: 1 }, // portal B, player corner cap=2
+      { row: 0, col: 1, owner: 0, orbs: 2 }, // player edge, cap=3
+      { row: 1, col: 0, owner: 0, orbs: 2 }, // player edge, cap=3
+      { row: 4, col: 5, owner: 1, orbs: 2, highlighted: true }, // target, edge cap=3
+      { row: 5, col: 4, owner: 1, orbs: 1 }, // opponent edge
+      { row: 3, col: 5, owner: 1, orbs: 1 }, // opponent — context
     ],
   },
 
@@ -351,12 +353,12 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Your loaded cells each sit beside an opponent's corner — one burst captures the corner and the cascade clears the rest.",
     objective: { kind: "eliminate-all" },
     cells: [
-      { row: 0, col: 5, owner: 1, orbs: 1 },  // opponent 1 corner, cap=2
-      { row: 1, col: 5, owner: 1, orbs: 1 },  // opponent 1 edge
-      { row: 5, col: 0, owner: 2, orbs: 1 },  // opponent 2 corner, cap=2
-      { row: 5, col: 1, owner: 2, orbs: 1 },  // opponent 2 edge
-      { row: 0, col: 4, owner: 0, orbs: 2 },  // player edge, cap=3, fires into opp1 corner
-      { row: 4, col: 0, owner: 0, orbs: 2 },  // player edge, cap=3, fires into opp2 corner
+      { row: 0, col: 5, owner: 1, orbs: 1 }, // opponent 1 corner, cap=2
+      { row: 1, col: 5, owner: 1, orbs: 1 }, // opponent 1 edge
+      { row: 5, col: 0, owner: 2, orbs: 1 }, // opponent 2 corner, cap=2
+      { row: 5, col: 1, owner: 2, orbs: 1 }, // opponent 2 edge
+      { row: 0, col: 4, owner: 0, orbs: 2 }, // player edge, cap=3, fires into opp1 corner
+      { row: 4, col: 0, owner: 0, orbs: 2 }, // player edge, cap=3, fires into opp2 corner
     ],
   },
 
@@ -368,7 +370,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "m-decoy",
     name: "DECOY",
-    brief: "Two clusters are loaded, but only the larger one can chain 10 or more. Count before you commit.",
+    brief:
+      "Two clusters are loaded, but only the larger one can chain 10 or more. Count before you commit.",
     difficulty: "medium",
     modeKind: "classic",
     rows: 6,
@@ -384,7 +387,7 @@ export const PUZZLES: PuzzleDef[] = [
       ...loadedBlock(6, 6, 0, 0, 1, 1),
       // Large cluster (bottom right, rows 3–5, cols 1–5 = 15 cells) — fires 15 explosions
       ...loadedBlock(6, 6, 3, 1, 5, 5),
-      { row: 0, col: 5, owner: 1, orbs: 1 },  // opponent — context only
+      { row: 0, col: 5, owner: 1, orbs: 1 }, // opponent — context only
     ],
   },
 
@@ -410,17 +413,17 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
       // Cluster A — top-right
-      { row: 0, col: 4, owner: 1, orbs: 2 },  // opponent edge, cap=3
-      { row: 0, col: 5, owner: 1, orbs: 1 },  // opponent corner, cap=2
+      { row: 0, col: 4, owner: 1, orbs: 2 }, // opponent edge, cap=3
+      { row: 0, col: 5, owner: 1, orbs: 1 }, // opponent corner, cap=2
       // Cluster B — bottom-left
-      { row: 5, col: 0, owner: 1, orbs: 1 },  // opponent corner, cap=2
-      { row: 5, col: 1, owner: 1, orbs: 2 },  // opponent edge, cap=3
+      { row: 5, col: 0, owner: 1, orbs: 1 }, // opponent corner, cap=2
+      { row: 5, col: 1, owner: 1, orbs: 2 }, // opponent edge, cap=3
       // Cluster C — center
-      { row: 2, col: 4, owner: 1, orbs: 3 },  // opponent interior, cap=4
+      { row: 2, col: 4, owner: 1, orbs: 3 }, // opponent interior, cap=4
       // Player targeting cells
-      { row: 0, col: 3, owner: 0, orbs: 2 },  // fires into cluster A
-      { row: 5, col: 2, owner: 0, orbs: 2 },  // fires into cluster B
-      { row: 2, col: 3, owner: 0, orbs: 3 },  // fires into cluster C
+      { row: 0, col: 3, owner: 0, orbs: 2 }, // fires into cluster A
+      { row: 5, col: 2, owner: 0, orbs: 2 }, // fires into cluster B
+      { row: 2, col: 3, owner: 0, orbs: 3 }, // fires into cluster C
     ],
   },
 
@@ -444,15 +447,15 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "Amplifiers send two orbs in every direction — enough to push every neighbor past critical mass at once.",
     objective: { kind: "chain", minExplosions: 8 },
     cells: [
-      { row: 3, col: 3, tile: "amplifier", owner: 0, orbs: 3 },  // amplifier, interior cap=4
-      { row: 2, col: 3, owner: 0, orbs: 3 },  // north arm, interior cap=4
-      { row: 4, col: 3, owner: 0, orbs: 3 },  // south arm, interior cap=4
-      { row: 3, col: 2, owner: 0, orbs: 3 },  // west arm, interior cap=4
-      { row: 3, col: 4, owner: 0, orbs: 3 },  // east arm, interior cap=4
-      { row: 1, col: 3, owner: 0, orbs: 3 },  // north extension, interior cap=4
-      { row: 2, col: 2, owner: 0, orbs: 3 },  // extension, interior cap=4
-      { row: 2, col: 4, owner: 0, orbs: 3 },  // extension, interior cap=4
-      { row: 0, col: 0, owner: 1, orbs: 1 },  // opponent — context only
+      { row: 3, col: 3, tile: "amplifier", owner: 0, orbs: 3 }, // amplifier, interior cap=4
+      { row: 2, col: 3, owner: 0, orbs: 3 }, // north arm, interior cap=4
+      { row: 4, col: 3, owner: 0, orbs: 3 }, // south arm, interior cap=4
+      { row: 3, col: 2, owner: 0, orbs: 3 }, // west arm, interior cap=4
+      { row: 3, col: 4, owner: 0, orbs: 3 }, // east arm, interior cap=4
+      { row: 1, col: 3, owner: 0, orbs: 3 }, // north extension, interior cap=4
+      { row: 2, col: 2, owner: 0, orbs: 3 }, // extension, interior cap=4
+      { row: 2, col: 4, owner: 0, orbs: 3 }, // extension, interior cap=4
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent — context only
     ],
   },
 
@@ -466,7 +469,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "h-crossroads",
     name: "CROSSROADS",
-    brief: "Three opponents stand at the crossroads. One well-aimed shot can topple two of them at once.",
+    brief:
+      "Three opponents stand at the crossroads. One well-aimed shot can topple two of them at once.",
     difficulty: "hard",
     modeKind: "classic",
     rows: 6,
@@ -479,16 +483,16 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate-all" },
     cells: [
       // Opponent 1 — top-right corner chain
-      { row: 0, col: 4, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 5, owner: 1, orbs: 1 },  // corner, cap=2
+      { row: 0, col: 4, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 5, owner: 1, orbs: 1 }, // corner, cap=2
       // Opponent 2 — bottom-left corner chain
-      { row: 5, col: 0, owner: 2, orbs: 1 },  // corner, cap=2
-      { row: 5, col: 1, owner: 2, orbs: 2 },  // edge, cap=3
+      { row: 5, col: 0, owner: 2, orbs: 1 }, // corner, cap=2
+      { row: 5, col: 1, owner: 2, orbs: 2 }, // edge, cap=3
       // Opponent 3 — right-side edge (connected to opp1's corner explosion)
-      { row: 1, col: 5, owner: 3, orbs: 2 },  // edge, cap=3
+      { row: 1, col: 5, owner: 3, orbs: 2 }, // edge, cap=3
       // Player
-      { row: 0, col: 3, owner: 0, orbs: 2 },  // fires into opp1+opp3 cascade
-      { row: 5, col: 2, owner: 0, orbs: 2 },  // fires into opp2 cascade
+      { row: 0, col: 3, owner: 0, orbs: 2 }, // fires into opp1+opp3 cascade
+      { row: 5, col: 2, owner: 0, orbs: 2 }, // fires into opp2 cascade
     ],
   },
 
@@ -499,7 +503,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "h-spiral",
     name: "SPIRAL",
-    brief: "A loaded L-shape snakes along the top and right edges. One tap at the corner fires all twelve.",
+    brief:
+      "A loaded L-shape snakes along the top and right edges. One tap at the corner fires all twelve.",
     difficulty: "hard",
     modeKind: "classic",
     rows: 7,
@@ -512,19 +517,19 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "chain", minExplosions: 12 },
     cells: [
       // Top row: (0,0) to (0,6)
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap=2
-      { row: 0, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 3, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 4, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 5, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — bridges to right column
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap=2
+      { row: 0, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 3, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 4, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 5, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — bridges to right column
       // Right column: (1,6) to (5,6)
-      { row: 1, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 2, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 3, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 4, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 6, owner: 0, orbs: 2 },  // edge, cap=3 — final explosion
+      { row: 1, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 2, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 3, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 4, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 6, owner: 0, orbs: 2 }, // edge, cap=3 — final explosion
       // Opponent context
       { row: 6, col: 0, owner: 1, orbs: 1 },
     ],
@@ -538,7 +543,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "h-three-way",
     name: "THREE WAY",
-    brief: "RED controls three corners of the board. You have exactly one primed shot for each cluster.",
+    brief:
+      "RED controls three corners of the board. You have exactly one primed shot for each cluster.",
     difficulty: "hard",
     modeKind: "classic",
     rows: 7,
@@ -551,17 +557,17 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
       // Cluster A — top-right
-      { row: 0, col: 6, owner: 1, orbs: 1 },  // corner, cap=2
-      { row: 1, col: 6, owner: 1, orbs: 2 },  // edge, cap=3
+      { row: 0, col: 6, owner: 1, orbs: 1 }, // corner, cap=2
+      { row: 1, col: 6, owner: 1, orbs: 2 }, // edge, cap=3
       // Cluster B — bottom-left
-      { row: 6, col: 0, owner: 1, orbs: 1 },  // corner, cap=2
-      { row: 6, col: 1, owner: 1, orbs: 2 },  // edge, cap=3
+      { row: 6, col: 0, owner: 1, orbs: 1 }, // corner, cap=2
+      { row: 6, col: 1, owner: 1, orbs: 2 }, // edge, cap=3
       // Cluster C — center interior
-      { row: 3, col: 3, owner: 1, orbs: 3 },  // interior, cap=4
+      { row: 3, col: 3, owner: 1, orbs: 3 }, // interior, cap=4
       // Player targeting cells
-      { row: 0, col: 5, owner: 0, orbs: 2 },  // fires into cluster A corner (top edge)
-      { row: 6, col: 2, owner: 0, orbs: 2 },  // fires into cluster B (bottom edge)
-      { row: 3, col: 2, owner: 0, orbs: 3 },  // interior fires into cluster C (interior cap=4)
+      { row: 0, col: 5, owner: 0, orbs: 2 }, // fires into cluster A corner (top edge)
+      { row: 6, col: 2, owner: 0, orbs: 2 }, // fires into cluster B (bottom edge)
+      { row: 3, col: 2, owner: 0, orbs: 3 }, // interior fires into cluster C (interior cap=4)
     ],
   },
 
@@ -572,7 +578,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "h-double-portal",
     name: "DOUBLE PORTAL",
-    brief: "The top chain leads to Portal A. The explosion emerges from Portal B and ignites a second chain below.",
+    brief:
+      "The top chain leads to Portal A. The explosion emerges from Portal B and ignites a second chain below.",
     difficulty: "hard",
     modeKind: "arena",
     rows: 6,
@@ -585,20 +592,20 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "chain", minExplosions: 10 },
     cells: [
       // Top chain
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap=2
-      { row: 0, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 3, owner: 0, orbs: 2 },  // edge, cap=3 — fires into portal A
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap=2
+      { row: 0, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 3, owner: 0, orbs: 2 }, // edge, cap=3 — fires into portal A
       // Portal A (empty, receives orb from top chain)
       { row: 0, col: 4, tile: "portal", portalGroup: 1 },
       // Portal B (player, at cap-1 — fires on receiving the teleported orb)
       { row: 5, col: 0, tile: "portal", portalGroup: 1, owner: 0, orbs: 1 },
       // Bottom chain
-      { row: 5, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 3, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 4, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 5, owner: 0, orbs: 1 },  // corner, cap=2
+      { row: 5, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 3, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 4, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 5, owner: 0, orbs: 1 }, // corner, cap=2
       // Opponent context
       { row: 3, col: 3, owner: 1, orbs: 1 },
     ],
@@ -613,7 +620,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "h-breakthrough",
     name: "BREAKTHROUGH",
-    brief: "The target is one cell too far to reach directly. Punch through the loaded cell in between.",
+    brief:
+      "The target is one cell too far to reach directly. Punch through the loaded cell in between.",
     difficulty: "hard",
     modeKind: "classic",
     rows: 6,
@@ -625,10 +633,10 @@ export const PUZZLES: PuzzleDef[] = [
     hint: "First bring your interior cell to critical mass — then fire it through the enemy's loaded cell.",
     objective: { kind: "capture", row: 3, col: 5 },
     cells: [
-      { row: 3, col: 3, owner: 0, orbs: 2 },                     // player interior, cap=4 — needs priming
-      { row: 3, col: 4, owner: 1, orbs: 3 },                     // opponent interior, cap=4 — primed
-      { row: 3, col: 5, owner: 1, orbs: 1, highlighted: true },  // target, edge cap=3
-      { row: 0, col: 0, owner: 1, orbs: 1 },                     // opponent context
+      { row: 3, col: 3, owner: 0, orbs: 2 }, // player interior, cap=4 — needs priming
+      { row: 3, col: 4, owner: 1, orbs: 3 }, // opponent interior, cap=4 — primed
+      { row: 3, col: 5, owner: 1, orbs: 1, highlighted: true }, // target, edge cap=3
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent context
     ],
   },
 
@@ -652,24 +660,24 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "chain", minExplosions: 15 },
     cells: [
       // Left column (top → bottom)
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap=2
-      { row: 1, col: 0, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 2, col: 0, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 3, col: 0, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 4, col: 0, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 0, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 0, owner: 0, orbs: 1 },  // corner, cap=2 — turns chain rightward
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap=2
+      { row: 1, col: 0, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 2, col: 0, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 3, col: 0, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 4, col: 0, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 0, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 0, owner: 0, orbs: 1 }, // corner, cap=2 — turns chain rightward
       // Bottom row (left → right)
-      { row: 6, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 3, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 4, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 5, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — turns chain upward
+      { row: 6, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 3, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 4, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 5, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — turns chain upward
       // Right column (bottom → top, partial)
-      { row: 5, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 4, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 3, col: 6, owner: 0, orbs: 2 },  // edge, cap=3 — final explosion [16]
+      { row: 5, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 4, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 3, col: 6, owner: 0, orbs: 2 }, // edge, cap=3 — final explosion [16]
       // Opponent context
       { row: 0, col: 6, owner: 1, orbs: 1 },
     ],
@@ -684,7 +692,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "x-perimeter",
     name: "PERIMETER",
-    brief: "Three sides of the board are loaded and primed. Find the one corner that ignites the full perimeter.",
+    brief:
+      "Three sides of the board are loaded and primed. Find the one corner that ignites the full perimeter.",
     difficulty: "expert",
     modeKind: "classic",
     rows: 7,
@@ -697,27 +706,27 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "chain", minExplosions: 18 },
     cells: [
       // Top row (left → right)
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap=2
-      { row: 0, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 3, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 4, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 5, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — bridges top→right column
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap=2
+      { row: 0, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 3, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 4, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 5, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — bridges top→right column
       // Right column (top → bottom)
-      { row: 1, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 2, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 3, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 4, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 6, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — bridges right→bottom row
+      { row: 1, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 2, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 3, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 4, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 6, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — bridges right→bottom row
       // Bottom row (right → left)
-      { row: 6, col: 5, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 4, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 3, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 2, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 1, owner: 0, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 0, owner: 0, orbs: 1 },  // corner, cap=2 — final explosion [19]
+      { row: 6, col: 5, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 4, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 3, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 2, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 1, owner: 0, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 0, owner: 0, orbs: 1 }, // corner, cap=2 — final explosion [19]
       // Opponent context
       { row: 3, col: 0, owner: 1, orbs: 1 },
     ],
@@ -744,26 +753,26 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate-all" },
     cells: [
       // Opponent 1 — top-left
-      { row: 0, col: 0, owner: 1, orbs: 1 },  // corner, cap=2
-      { row: 0, col: 1, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 1, col: 0, owner: 1, orbs: 2 },  // edge, cap=3
+      { row: 0, col: 0, owner: 1, orbs: 1 }, // corner, cap=2
+      { row: 0, col: 1, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 1, col: 0, owner: 1, orbs: 2 }, // edge, cap=3
       // Opponent 2 — top-right
-      { row: 0, col: 6, owner: 2, orbs: 1 },  // corner, cap=2
-      { row: 0, col: 5, owner: 2, orbs: 2 },  // edge, cap=3
-      { row: 1, col: 6, owner: 2, orbs: 2 },  // edge, cap=3
+      { row: 0, col: 6, owner: 2, orbs: 1 }, // corner, cap=2
+      { row: 0, col: 5, owner: 2, orbs: 2 }, // edge, cap=3
+      { row: 1, col: 6, owner: 2, orbs: 2 }, // edge, cap=3
       // Opponent 3 — bottom-left
-      { row: 6, col: 0, owner: 3, orbs: 1 },  // corner, cap=2
-      { row: 6, col: 1, owner: 3, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 0, owner: 3, orbs: 2 },  // edge, cap=3
+      { row: 6, col: 0, owner: 3, orbs: 1 }, // corner, cap=2
+      { row: 6, col: 1, owner: 3, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 0, owner: 3, orbs: 2 }, // edge, cap=3
       // Opponent 4 — bottom-right
-      { row: 6, col: 6, owner: 4, orbs: 1 },  // corner, cap=2
-      { row: 6, col: 5, owner: 4, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 6, owner: 4, orbs: 2 },  // edge, cap=3
+      { row: 6, col: 6, owner: 4, orbs: 1 }, // corner, cap=2
+      { row: 6, col: 5, owner: 4, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 6, owner: 4, orbs: 2 }, // edge, cap=3
       // Player — one interior cell per cluster, all at cap-1
-      { row: 1, col: 1, owner: 0, orbs: 3 },  // targets opp1 (up→(0,1), left→(1,0))
-      { row: 1, col: 5, owner: 0, orbs: 3 },  // targets opp2 (up→(0,5), right→(1,6))
-      { row: 5, col: 1, owner: 0, orbs: 3 },  // targets opp3 (down→(6,1), left→(5,0))
-      { row: 5, col: 5, owner: 0, orbs: 3 },  // targets opp4 (down→(6,5), right→(5,6))
+      { row: 1, col: 1, owner: 0, orbs: 3 }, // targets opp1 (up→(0,1), left→(1,0))
+      { row: 1, col: 5, owner: 0, orbs: 3 }, // targets opp2 (up→(0,5), right→(1,6))
+      { row: 5, col: 1, owner: 0, orbs: 3 }, // targets opp3 (down→(6,1), left→(5,0))
+      { row: 5, col: 5, owner: 0, orbs: 3 }, // targets opp4 (down→(6,5), right→(5,6))
     ],
   },
 
@@ -775,7 +784,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "x-split-strike",
     name: "SPLIT STRIKE",
-    brief: "Two targets, two methods. One needs a direct hit — the other only the portal can reach.",
+    brief:
+      "Two targets, two methods. One needs a direct hit — the other only the portal can reach.",
     difficulty: "expert",
     modeKind: "arena",
     rows: 7,
@@ -792,15 +802,15 @@ export const PUZZLES: PuzzleDef[] = [
       // Portal B (player-owned at cap-1, bottom side — fires into opp1 on receiving teleported orb)
       { row: 6, col: 3, tile: "portal", portalGroup: 1, owner: 0, orbs: 2 },
       // Player attack cells
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // fires right into portal A → clears opp1
-      { row: 0, col: 4, owner: 0, orbs: 2 },  // fires right into opp2 corner chain
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // fires right into portal A → clears opp1
+      { row: 0, col: 4, owner: 0, orbs: 2 }, // fires right into opp2 corner chain
       // Opponent 1 — bottom-right (only reachable via portal)
-      { row: 6, col: 4, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 5, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 6, owner: 1, orbs: 1 },  // corner, cap=2
+      { row: 6, col: 4, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 5, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 6, owner: 1, orbs: 1 }, // corner, cap=2
       // Opponent 2 — top-right (direct attack)
-      { row: 0, col: 5, owner: 2, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 6, owner: 2, orbs: 1 },  // corner, cap=2
+      { row: 0, col: 5, owner: 2, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 6, owner: 2, orbs: 1 }, // corner, cap=2
     ],
   },
 
@@ -811,7 +821,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "x-full-circuit",
     name: "FULL CIRCUIT",
-    brief: "Four sides of the board, a chain of twenty-three. One corner tap completes the circuit.",
+    brief:
+      "Four sides of the board, a chain of twenty-three. One corner tap completes the circuit.",
     difficulty: "expert",
     modeKind: "classic",
     rows: 7,
@@ -824,32 +835,32 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "chain", minExplosions: 22 },
     cells: [
       // Top row (left → right)
-      { row: 0, col: 0, owner: 0, orbs: 1 },  // corner, cap=2
+      { row: 0, col: 0, owner: 0, orbs: 1 }, // corner, cap=2
       { row: 0, col: 1, owner: 0, orbs: 2 },
       { row: 0, col: 2, owner: 0, orbs: 2 },
       { row: 0, col: 3, owner: 0, orbs: 2 },
       { row: 0, col: 4, owner: 0, orbs: 2 },
       { row: 0, col: 5, owner: 0, orbs: 2 },
-      { row: 0, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — bridges top→right
+      { row: 0, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — bridges top→right
       // Right column (top → bottom)
       { row: 1, col: 6, owner: 0, orbs: 2 },
       { row: 2, col: 6, owner: 0, orbs: 2 },
       { row: 3, col: 6, owner: 0, orbs: 2 },
       { row: 4, col: 6, owner: 0, orbs: 2 },
       { row: 5, col: 6, owner: 0, orbs: 2 },
-      { row: 6, col: 6, owner: 0, orbs: 1 },  // corner, cap=2 — bridges right→bottom
+      { row: 6, col: 6, owner: 0, orbs: 1 }, // corner, cap=2 — bridges right→bottom
       // Bottom row (right → left)
       { row: 6, col: 5, owner: 0, orbs: 2 },
       { row: 6, col: 4, owner: 0, orbs: 2 },
       { row: 6, col: 3, owner: 0, orbs: 2 },
       { row: 6, col: 2, owner: 0, orbs: 2 },
       { row: 6, col: 1, owner: 0, orbs: 2 },
-      { row: 6, col: 0, owner: 0, orbs: 1 },  // corner, cap=2 — bridges bottom→left column
+      { row: 6, col: 0, owner: 0, orbs: 1 }, // corner, cap=2 — bridges bottom→left column
       // Left column partial (bottom → top, stops at row 2 to prevent re-explosion at (0,0))
       { row: 5, col: 0, owner: 0, orbs: 2 },
       { row: 4, col: 0, owner: 0, orbs: 2 },
       { row: 3, col: 0, owner: 0, orbs: 2 },
-      { row: 2, col: 0, owner: 0, orbs: 2 },  // edge, cap=3 — final explosion [23]
+      { row: 2, col: 0, owner: 0, orbs: 2 }, // edge, cap=3 — final explosion [23]
       // Opponent context
       { row: 3, col: 3, owner: 1, orbs: 1 },
     ],
@@ -862,7 +873,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "x-triple-axis",
     name: "TRIPLE AXIS",
-    brief: "Three opponents, three edges, four shots available — but only three of them actually reach a target.",
+    brief:
+      "Three opponents, three edges, four shots available — but only three of them actually reach a target.",
     difficulty: "expert",
     modeKind: "classic",
     rows: 7,
@@ -875,22 +887,22 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate-all" },
     cells: [
       // Opponent 1 — top edge line
-      { row: 0, col: 3, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 4, owner: 1, orbs: 2 },  // edge, cap=3
-      { row: 0, col: 5, owner: 1, orbs: 2 },  // edge, cap=3
+      { row: 0, col: 3, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 4, owner: 1, orbs: 2 }, // edge, cap=3
+      { row: 0, col: 5, owner: 1, orbs: 2 }, // edge, cap=3
       // Opponent 2 — left edge line
-      { row: 3, col: 0, owner: 2, orbs: 2 },  // edge, cap=3
-      { row: 4, col: 0, owner: 2, orbs: 2 },  // edge, cap=3
-      { row: 5, col: 0, owner: 2, orbs: 2 },  // edge, cap=3
+      { row: 3, col: 0, owner: 2, orbs: 2 }, // edge, cap=3
+      { row: 4, col: 0, owner: 2, orbs: 2 }, // edge, cap=3
+      { row: 5, col: 0, owner: 2, orbs: 2 }, // edge, cap=3
       // Opponent 3 — bottom-right cluster
-      { row: 6, col: 4, owner: 3, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 5, owner: 3, orbs: 2 },  // edge, cap=3
-      { row: 6, col: 6, owner: 3, orbs: 1 },  // corner, cap=2
+      { row: 6, col: 4, owner: 3, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 5, owner: 3, orbs: 2 }, // edge, cap=3
+      { row: 6, col: 6, owner: 3, orbs: 1 }, // corner, cap=2
       // Player — three real shots + one decoy
-      { row: 0, col: 2, owner: 0, orbs: 2 },  // fires right → sweeps opp1 line
-      { row: 2, col: 0, owner: 0, orbs: 2 },  // fires down → sweeps opp2 line
-      { row: 6, col: 3, owner: 0, orbs: 2 },  // fires right → cascades opp3 cluster
-      { row: 4, col: 4, owner: 0, orbs: 3 },  // DECOY — fires into empty interior cells
+      { row: 0, col: 2, owner: 0, orbs: 2 }, // fires right → sweeps opp1 line
+      { row: 2, col: 0, owner: 0, orbs: 2 }, // fires down → sweeps opp2 line
+      { row: 6, col: 3, owner: 0, orbs: 2 }, // fires right → cascades opp3 cluster
+      { row: 4, col: 4, owner: 0, orbs: 3 }, // DECOY — fires into empty interior cells
     ],
   },
 
@@ -903,7 +915,8 @@ export const PUZZLES: PuzzleDef[] = [
   {
     id: "x-cascade-siege",
     name: "CASCADE SIEGE",
-    brief: "The cluster is two steps from critical — you must relay each capture through the one before it.",
+    brief:
+      "The cluster is two steps from critical — you must relay each capture through the one before it.",
     difficulty: "expert",
     modeKind: "classic",
     rows: 7,
@@ -916,12 +929,12 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "eliminate", playerIdx: 1 },
     cells: [
       // Opponent 1 — 2×2 interior cluster, each at orbs=2 (cap-2)
-      { row: 3, col: 3, owner: 1, orbs: 2 },  // interior, cap=4
-      { row: 3, col: 4, owner: 1, orbs: 2 },  // interior, cap=4
-      { row: 4, col: 3, owner: 1, orbs: 2 },  // interior, cap=4
-      { row: 4, col: 4, owner: 1, orbs: 2 },  // interior, cap=4
+      { row: 3, col: 3, owner: 1, orbs: 2 }, // interior, cap=4
+      { row: 3, col: 4, owner: 1, orbs: 2 }, // interior, cap=4
+      { row: 4, col: 3, owner: 1, orbs: 2 }, // interior, cap=4
+      { row: 4, col: 4, owner: 1, orbs: 2 }, // interior, cap=4
       // Player entry point — fires into the cluster
-      { row: 3, col: 2, owner: 0, orbs: 3 },  // interior, cap=4 — fires into (3,3)
+      { row: 3, col: 2, owner: 0, orbs: 3 }, // interior, cap=4 — fires into (3,3)
       // Opponent 2 — context only (different playerIdx, unrelated to objective)
       { row: 0, col: 0, owner: 2, orbs: 1 },
       { row: 6, col: 6, owner: 2, orbs: 1 },

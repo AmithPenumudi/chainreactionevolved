@@ -85,7 +85,9 @@ export function ChaosGridConfig(props: Props) {
                 >
                   −
                 </button>
-                <div className="w-8 text-center font-display text-base tabular-nums">{config[r.key]}</div>
+                <div className="w-8 text-center font-display text-base tabular-nums">
+                  {config[r.key]}
+                </div>
                 <button
                   onClick={() => step(r.key, 1)}
                   disabled={plusDisabled}
@@ -104,7 +106,9 @@ export function ChaosGridConfig(props: Props) {
         Special Cells <span className="text-white">{used}</span> / {limits.maxSpecialCells} maximum
       </div>
       {atMax && (
-        <div className="mt-1 text-[11px] text-[oklch(0.75_0.17_60)]">Maximum special tile limit reached.</div>
+        <div className="mt-1 text-[11px] text-[oklch(0.75_0.17_60)]">
+          Maximum special tile limit reached.
+        </div>
       )}
 
       <div className="mt-3 flex flex-wrap gap-2">

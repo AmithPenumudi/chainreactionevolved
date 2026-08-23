@@ -14,8 +14,15 @@ interface Props {
 }
 
 export function VictoryScreen({
-  winner, turns, durationMs, largestChain, eliminated,
-  cellsCaptured, largestTerritory, onRematch, onMenu,
+  winner,
+  turns,
+  durationMs,
+  largestChain,
+  eliminated,
+  cellsCaptured,
+  largestTerritory,
+  onRematch,
+  onMenu,
 }: Props) {
   const color = colorFor(winner.colorIndex);
   const stats = [

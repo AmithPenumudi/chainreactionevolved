@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import {
-  DIFFICULTY_LABEL, DIFFICULTY_ORDER, isUnlocked, loadPuzzleProgress, MEDAL_COLOR, MEDAL_LABEL,
-  objectiveText, PUZZLES, type PuzzleDef, type PuzzleProgress,
+  DIFFICULTY_LABEL,
+  DIFFICULTY_ORDER,
+  isUnlocked,
+  loadPuzzleProgress,
+  MEDAL_COLOR,
+  MEDAL_LABEL,
+  objectiveText,
+  PUZZLES,
+  type PuzzleDef,
+  type PuzzleProgress,
 } from "@/game/puzzles";
 
 interface Props {

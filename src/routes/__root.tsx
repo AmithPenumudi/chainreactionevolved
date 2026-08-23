@@ -78,17 +78,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Chain Reaction: Evolved — Grid Strategy Game" },
-      { name: "description", content: "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr" },
+      {
+        name: "description",
+        content:
+          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Chain Reaction: Evolved — Grid Strategy Game" },
-      { property: "og:description", content: "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr" },
+      {
+        property: "og:description",
+        content:
+          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Chain Reaction: Evolved — Grid Strategy Game" },
-      { name: "twitter:description", content: "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr" },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

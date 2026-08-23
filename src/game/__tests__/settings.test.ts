@@ -3,7 +3,9 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings, speedFactor } from "../se
 
 describe("speedFactor", () => {
   it("returns 1 for normal speed with motion enabled", () => {
-    expect(speedFactor({ ...DEFAULT_SETTINGS, chainSpeed: "normal", reducedMotion: false })).toBe(1);
+    expect(speedFactor({ ...DEFAULT_SETTINGS, chainSpeed: "normal", reducedMotion: false })).toBe(
+      1,
+    );
   });
 
   it("slows down for 'slow' and speeds up for 'fast'", () => {
@@ -12,7 +14,9 @@ describe("speedFactor", () => {
   });
 
   it("reduced motion overrides chain speed", () => {
-    expect(speedFactor({ ...DEFAULT_SETTINGS, chainSpeed: "slow", reducedMotion: true })).toBe(0.45);
+    expect(speedFactor({ ...DEFAULT_SETTINGS, chainSpeed: "slow", reducedMotion: true })).toBe(
+      0.45,
+    );
   });
 });
 

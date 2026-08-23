@@ -38,13 +38,17 @@ export function AbilityBar({ energy, selectedAbility, onSelect, disabled, compac
               onClick={() => onSelect(isSelected ? null : a.id)}
               title={a.desc}
               className={`group flex items-center justify-between rounded-md border px-2.5 py-1.5 text-left transition
-                ${isSelected
-                  ? "border-[oklch(0.72_0.18_235)] bg-[oklch(0.72_0.18_235/0.2)] text-white"
-                  : affordable
-                  ? "border-white/10 bg-white/[0.03] hover:border-white/30"
-                  : "border-white/5 bg-white/[0.02] opacity-40"}`}
+                ${
+                  isSelected
+                    ? "border-[oklch(0.72_0.18_235)] bg-[oklch(0.72_0.18_235/0.2)] text-white"
+                    : affordable
+                      ? "border-white/10 bg-white/[0.03] hover:border-white/30"
+                      : "border-white/5 bg-white/[0.02] opacity-40"
+                }`}
             >
-              <span className="font-display text-[11px] tracking-[0.15em]">{a.name.toUpperCase()}</span>
+              <span className="font-display text-[11px] tracking-[0.15em]">
+                {a.name.toUpperCase()}
+              </span>
               <span className="text-[10px] tabular-nums text-muted-foreground">{a.cost}</span>
             </button>
           );

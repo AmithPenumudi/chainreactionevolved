@@ -8,12 +8,7 @@ import {
   PlayerId,
   BoardState,
 } from "./engine";
-import {
-  AbilityId,
-  ABILITIES,
-  castAbility,
-  abilityById,
-} from "./abilities";
+import { AbilityId, ABILITIES, castAbility, abilityById } from "./abilities";
 
 export type AIDifficulty = "easy" | "normal" | "hard";
 
@@ -117,9 +112,9 @@ function scoreResult(state: GameState, res: MoveResult, me: PlayerId): number {
         if (cell.tile === "power") {
           positional += 12; // Power tiles are extremely valuable
         } else if (cell.tile === "amplifier") {
-          positional += 8;  // Amplifiers double the explosion count
+          positional += 8; // Amplifiers double the explosion count
         } else if (cell.tile === "reactor") {
-          positional += 6;  // Reactors are high priority
+          positional += 6; // Reactors are high priority
         }
 
         // Any enemy neighbor at all?
@@ -192,7 +187,7 @@ function alphaBetaSearch(
   alpha: number,
   beta: number,
   maximizing: boolean,
-  me: PlayerId
+  me: PlayerId,
 ): number {
   if (depth === 0 || state.winner !== null || state.draw) {
     return evaluateBoardFor(state, me);
@@ -204,11 +199,13 @@ function alphaBetaSearch(
   }
 
   // Pre-score moves to prune unpromising branches and limit branch factor
-  const scoredMoves = moves.map(m => {
-    const res = applyMove(state, m.r, m.c);
-    const score = res ? scoreResult(state, res, me) : -Infinity;
-    return { m, score, res };
-  }).filter(x => x.res !== null) as { m: Move; score: number; res: MoveResult }[];
+  const scoredMoves = moves
+    .map((m) => {
+      const res = applyMove(state, m.r, m.c);
+      const score = res ? scoreResult(state, res, me) : -Infinity;
+      return { m, score, res };
+    })
+    .filter((x) => x.res !== null) as { m: Move; score: number; res: MoveResult }[];
 
   if (maximizing) {
     scoredMoves.sort((a, b) => b.score - a.score);
@@ -280,9 +277,7 @@ function worstReplyForMe(state: GameState, me: PlayerId, sampleCap: number): num
   if (moves.length === 0) return evaluateBoardFor(state, me);
 
   const sample =
-    moves.length > sampleCap
-      ? moves.sort(() => Math.random() - 0.5).slice(0, sampleCap)
-      : moves;
+    moves.length > sampleCap ? moves.sort(() => Math.random() - 0.5).slice(0, sampleCap) : moves;
 
   let worst = Infinity;
   for (const m of sample) {
@@ -387,7 +382,11 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
     }
   }
 
-  let bestAction: AIAction = { type: "move", r: bestMove ? bestMove.r : 0, c: bestMove ? bestMove.c : 0 };
+  let bestAction: AIAction = {
+    type: "move",
+    r: bestMove ? bestMove.r : 0,
+    c: bestMove ? bestMove.c : 0,
+  };
   let bestActionScore = bestMoveScore;
 
   // If abilities are enabled and we are Normal/Hard AI, evaluate possible abilities
@@ -443,13 +442,17 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
           }
         }
 
-        const sampleSources = sources.length > 10 ? sources.sort(() => Math.random() - 0.5).slice(0, 10) : sources;
+        const sampleSources =
+          sources.length > 10 ? sources.sort(() => Math.random() - 0.5).slice(0, 10) : sources;
 
         for (const [sr, sc] of sampleSources) {
           for (let dr = 0; dr < state.board.rows; dr++) {
             for (let dc = 0; dc < state.board.cols; dc++) {
               if (ab.validate(state, dr, dc, 1, [sr, sc])) {
-                const res = castAbility(state, ab.id, [[sr, sc], [dr, dc]]);
+                const res = castAbility(state, ab.id, [
+                  [sr, sc],
+                  [dr, dc],
+                ]);
                 if (res) {
                   const energyDelta = res.energyDelta ?? -ab.cost;
                   const energyAfter = Math.min(100, Math.max(0, currentEnergy + energyDelta));
@@ -458,7 +461,16 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
                   const score = oppReplyScore + energyAfter * 0.3;
                   if (score > bestActionScore) {
                     bestActionScore = score;
-                    bestAction = { type: "ability", r: sr, c: sc, abilityId: ab.id, targets: [[sr, sc], [dr, dc]] };
+                    bestAction = {
+                      type: "ability",
+                      r: sr,
+                      c: sc,
+                      abilityId: ab.id,
+                      targets: [
+                        [sr, sc],
+                        [dr, dc],
+                      ],
+                    };
                   }
                 }
               }

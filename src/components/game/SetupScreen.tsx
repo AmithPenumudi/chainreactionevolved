@@ -47,21 +47,33 @@ const MODE_CARDS: {
     label: "CLASSIC",
     tag: "Pure Strategy",
     desc: "Original Chain Reaction. No powers. No special tiles.",
-    flags: [["Energy", false], ["Abilities", false], ["Special Tiles", false]],
+    flags: [
+      ["Energy", false],
+      ["Abilities", false],
+      ["Special Tiles", false],
+    ],
   },
   {
     kind: "abilities",
     label: "ABILITIES",
     tag: "Power Strategy",
     desc: "Build energy and unleash tactical abilities.",
-    flags: [["Energy", true], ["Abilities", true], ["Special Tiles", false]],
+    flags: [
+      ["Energy", true],
+      ["Abilities", true],
+      ["Special Tiles", false],
+    ],
   },
   {
     kind: "arena",
     label: "ARENA",
     tag: "Battlefield Strategy",
     desc: "Fight across boards with portals, walls, amplifiers and more.",
-    flags: [["Energy", false], ["Abilities", false], ["Special Tiles", true]],
+    flags: [
+      ["Energy", false],
+      ["Abilities", false],
+      ["Special Tiles", true],
+    ],
   },
 ];
 
@@ -80,7 +92,16 @@ const BOARD_SIZES = [
   { label: "10 × 15", rows: 10, cols: 15 },
 ];
 
-const DEFAULT_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8"];
+const DEFAULT_NAMES = [
+  "Player 1",
+  "Player 2",
+  "Player 3",
+  "Player 4",
+  "Player 5",
+  "Player 6",
+  "Player 7",
+  "Player 8",
+];
 
 export function SetupScreen({ onBack, onStart }: Props) {
   const [modeKind, setModeKind] = useState<ModeKind>("classic");
@@ -89,8 +110,19 @@ export function SetupScreen({ onBack, onStart }: Props) {
   const [boardIdx, setBoardIdx] = useState(0);
   const [names, setNames] = useState(DEFAULT_NAMES);
   const [colorIndices, setColorIndices] = useState([0, 1, 2, 3, 4, 5, 6, 7]);
-  const [isAI, setIsAI] = useState<boolean[]>([false, true, false, false, false, false, false, false]);
-  const [difficulty, setDifficulty] = useState<("easy" | "normal" | "hard")[]>(Array(8).fill("normal"));
+  const [isAI, setIsAI] = useState<boolean[]>([
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
+  const [difficulty, setDifficulty] = useState<("easy" | "normal" | "hard")[]>(
+    Array(8).fill("normal"),
+  );
   const [ruleVariant, setRuleVariant] = useState<GameMode>("classic");
   const [rules, setRules] = useState<GameRules>(() => ({ ...DEFAULT_RULES.classic }));
   const chaosMap = ARENA_MAPS.find((m) => m.id === "chaos")!;
@@ -157,7 +189,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
 
         {/* Top-level mode */}
         <section className="mt-8">
-          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">GAME MODE</label>
+          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+            GAME MODE
+          </label>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
             {MODE_CARDS.map((m) => {
               const active = modeKind === m.kind;
@@ -172,11 +206,18 @@ export function SetupScreen({ onBack, onStart }: Props) {
                   }`}
                 >
                   <div className="font-display text-base tracking-widest">{m.label}</div>
-                  <div className="mt-0.5 text-[10px] tracking-[0.2em] text-muted-foreground">{m.tag}</div>
-                  <div className="mt-2 text-[11px] leading-snug text-muted-foreground/90">{m.desc}</div>
+                  <div className="mt-0.5 text-[10px] tracking-[0.2em] text-muted-foreground">
+                    {m.tag}
+                  </div>
+                  <div className="mt-2 text-[11px] leading-snug text-muted-foreground/90">
+                    {m.desc}
+                  </div>
                   <ul className="mt-3 space-y-0.5 text-[10px] font-mono">
                     {m.flags.map(([k, on]) => (
-                      <li key={k} className={on ? "text-[oklch(0.75_0.15_150)]" : "text-muted-foreground/60"}>
+                      <li
+                        key={k}
+                        className={on ? "text-[oklch(0.75_0.15_150)]" : "text-muted-foreground/60"}
+                      >
                         {on ? "●" : "○"} {k}
                       </li>
                     ))}
@@ -190,7 +231,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
         {/* Arena map picker */}
         {modeKind === "arena" && (
           <section className="mt-6">
-            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">SELECT ARENA</label>
+            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+              SELECT ARENA
+            </label>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {ARENA_MAPS.map((m) => {
                 const active = arenaMapId === m.id;
@@ -203,17 +246,23 @@ export function SetupScreen({ onBack, onStart }: Props) {
                       !m.available
                         ? "border-white/5 bg-white/[0.02] opacity-50"
                         : active
-                        ? "border-[oklch(0.72_0.18_235)] bg-[oklch(0.72_0.18_235/0.15)]"
-                        : "border-white/10 bg-white/[0.03] hover:border-white/30"
+                          ? "border-[oklch(0.72_0.18_235)] bg-[oklch(0.72_0.18_235/0.15)]"
+                          : "border-white/10 bg-white/[0.03] hover:border-white/30"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-display text-sm tracking-widest">{m.label.toUpperCase()}</span>
+                      <span className="font-display text-sm tracking-widest">
+                        {m.label.toUpperCase()}
+                      </span>
                       {!m.available && (
-                        <span className="text-[9px] tracking-[0.2em] text-muted-foreground">COMING SOON</span>
+                        <span className="text-[9px] tracking-[0.2em] text-muted-foreground">
+                          COMING SOON
+                        </span>
                       )}
                     </div>
-                    <div className="mt-1 text-[11px] leading-snug text-muted-foreground">{m.desc}</div>
+                    <div className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      {m.desc}
+                    </div>
                   </button>
                 );
               })}
@@ -249,7 +298,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
         {/* Classic rule variant */}
         {modeKind === "classic" && (
           <section className="mt-6">
-            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">RULE VARIANT</label>
+            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+              RULE VARIANT
+            </label>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {CLASSIC_VARIANTS.map((m) => (
                 <button
@@ -265,14 +316,18 @@ export function SetupScreen({ onBack, onStart }: Props) {
                   }`}
                 >
                   <div className="font-display text-sm">{m.label}</div>
-                  <div className="mt-1 text-[10px] leading-snug text-muted-foreground">{m.tagline}</div>
+                  <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                    {m.tagline}
+                  </div>
                 </button>
               ))}
             </div>
 
             {(ruleVariant === "blitz" || ruleVariant === "custom") && (
               <div className="mt-3 rounded-md border border-white/10 bg-white/[0.03] p-3">
-                <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">TURN TIMER</label>
+                <label className="font-display text-[10px] tracking-[0.25em] text-muted-foreground">
+                  TURN TIMER
+                </label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {TURN_TIME_OPTIONS.map((ms) => (
                     <button
@@ -311,7 +366,11 @@ export function SetupScreen({ onBack, onStart }: Props) {
                     <button
                       key={rounds}
                       onClick={() =>
-                        setRules((r) => ({ ...r, shrinkIntervalRounds: rounds, enableShrink: true }))
+                        setRules((r) => ({
+                          ...r,
+                          shrinkIntervalRounds: rounds,
+                          enableShrink: true,
+                        }))
                       }
                       className={`rounded-md px-3 py-1.5 text-[10px] tracking-[0.2em] transition ${
                         rules.shrinkIntervalRounds === rounds
@@ -323,7 +382,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
                     </button>
                   ))}
                   <button
-                    onClick={() => setRules((r) => ({ ...r, shrinkIntervalRounds: 0, enableShrink: false }))}
+                    onClick={() =>
+                      setRules((r) => ({ ...r, shrinkIntervalRounds: 0, enableShrink: false }))
+                    }
                     className={`rounded-md px-3 py-1.5 text-[10px] tracking-[0.2em] transition ${
                       !rules.enableShrink
                         ? "bg-[oklch(0.72_0.18_235/0.25)] text-white"
@@ -340,7 +401,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
 
         {/* Player count */}
         <section className="mt-8">
-          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">PLAYERS</label>
+          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+            PLAYERS
+          </label>
           <div className="mt-2 flex flex-wrap gap-2">
             {[2, 3, 4, 5, 6, 7, 8].map((n) => (
               <button
@@ -361,7 +424,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
         {/* Board size — hidden for Arena (map defines its size) */}
         {modeKind !== "arena" && (
           <section className="mt-8">
-            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">BOARD SIZE</label>
+            <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+              BOARD SIZE
+            </label>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {BOARD_SIZES.map((s, i) => (
                 <button
@@ -385,7 +450,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
 
         {/* Players */}
         <section className="mt-8">
-          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">PLAYER PROFILES</label>
+          <label className="font-display text-xs tracking-[0.3em] text-muted-foreground">
+            PLAYER PROFILES
+          </label>
           <div className="mt-2 space-y-2">
             {Array.from({ length: playerCount }, (_, i) => (
               <div key={i} className="rounded-md border border-white/10 bg-white/[0.03] p-3">
@@ -436,20 +503,28 @@ export function SetupScreen({ onBack, onStart }: Props) {
                   <div className="flex overflow-hidden rounded-md border border-white/10">
                     <button
                       onClick={() => {
-                        const next = isAI.slice(); next[i] = false; setIsAI(next);
+                        const next = isAI.slice();
+                        next[i] = false;
+                        setIsAI(next);
                       }}
                       className={`px-3 py-1.5 text-[10px] tracking-[0.25em] transition ${
-                        !isAI[i] ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"
+                        !isAI[i]
+                          ? "bg-white/10 text-white"
+                          : "text-muted-foreground hover:text-white"
                       }`}
                     >
                       HUMAN
                     </button>
                     <button
                       onClick={() => {
-                        const next = isAI.slice(); next[i] = true; setIsAI(next);
+                        const next = isAI.slice();
+                        next[i] = true;
+                        setIsAI(next);
                       }}
                       className={`px-3 py-1.5 text-[10px] tracking-[0.25em] transition ${
-                        isAI[i] ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"
+                        isAI[i]
+                          ? "bg-white/10 text-white"
+                          : "text-muted-foreground hover:text-white"
                       }`}
                     >
                       CPU
@@ -461,7 +536,9 @@ export function SetupScreen({ onBack, onStart }: Props) {
                         <button
                           key={d}
                           onClick={() => {
-                            const next = difficulty.slice(); next[i] = d; setDifficulty(next);
+                            const next = difficulty.slice();
+                            next[i] = d;
+                            setDifficulty(next);
                           }}
                           className={`px-3 py-1.5 text-[10px] tracking-[0.25em] uppercase transition ${
                             difficulty[i] === d

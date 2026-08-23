@@ -14,14 +14,21 @@ import { PuzzlesScreen } from "@/components/game/PuzzlesScreen";
 import { PuzzleGame } from "@/components/game/PuzzleGame";
 import { PUZZLE_ORDER, type PuzzleDef } from "@/game/puzzles";
 
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Chain Reaction: Evolved — Grid Strategy Game" },
-      { name: "description", content: "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr" },
+      {
+        name: "description",
+        content:
+          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
+      },
       { property: "og:title", content: "Chain Reaction: Evolved — Grid Strategy Game" },
-      { property: "og:description", content: "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr" },
+      {
+        property: "og:description",
+        content:
+          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

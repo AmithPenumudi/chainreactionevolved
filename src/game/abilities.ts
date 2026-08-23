@@ -8,13 +8,7 @@ import {
 } from "./engine";
 
 export type AbilityId =
-  | "overload"
-  | "shield"
-  | "fortify"
-  | "double-drop"
-  | "emp"
-  | "relocate"
-  | "overcharge";
+  "overload" | "shield" | "fortify" | "double-drop" | "emp" | "relocate" | "overcharge";
 
 export interface AbilityDef {
   id: AbilityId;
@@ -24,7 +18,13 @@ export interface AbilityDef {
   /** How many cell targets the ability needs (0, 1, or 2). */
   targets: 0 | 1 | 2;
   /** Which cells are valid targets. */
-  validate: (state: GameState, r: number, c: number, step: 0 | 1, first?: [number, number]) => boolean;
+  validate: (
+    state: GameState,
+    r: number,
+    c: number,
+    step: 0 | 1,
+    first?: [number, number],
+  ) => boolean;
 }
 
 const isOwn = (state: GameState, r: number, c: number) => {
@@ -134,7 +134,7 @@ export function castAbility(
   const boardBefore = cloneBoard(state.board);
   const board = cloneBoard(state.board);
 
-  let usedPowerBonus = false;
+  const usedPowerBonus = false;
   let keepTurn = false;
   let capturedPowerTiles = 0;
 
@@ -193,8 +193,11 @@ export function castAbility(
     }
   }
 
-  const { steps, chainCount, capturedCells, eliminatedThisMove, winner } =
-    resolveExplosions(state, board, player);
+  const { steps, chainCount, capturedCells, eliminatedThisMove, winner } = resolveExplosions(
+    state,
+    board,
+    player,
+  );
 
   // Abilities also grant energy from resulting chains (but not the placement bonus).
   let energyDelta = -def.cost;

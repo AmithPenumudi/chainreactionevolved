@@ -71,7 +71,14 @@ export function clampChaosConfig(cfg: ChaosConfig, rows: number, cols: number): 
     deadZones: Math.max(0, Math.min(lim.deadZones, Math.round(cfg.deadZones ?? 0))),
   };
   // Trim (in reverse priority) until the total budget is respected.
-  const order: (keyof ChaosConfig)[] = ["deadZones", "walls", "reactors", "powerTiles", "amplifiers", "portalPairs"];
+  const order: (keyof ChaosConfig)[] = [
+    "deadZones",
+    "walls",
+    "reactors",
+    "powerTiles",
+    "amplifiers",
+    "portalPairs",
+  ];
   for (const key of order) {
     while (specialCellCount(out) > lim.maxSpecialCells && out[key] > 0) out[key] -= 1;
   }
@@ -103,7 +110,11 @@ export function randomSeed() {
   return Math.floor(Math.random() * 2 ** 31);
 }
 
-export function randomChaosConfig(rows: number, cols: number, rnd: () => number = Math.random): ChaosConfig {
+export function randomChaosConfig(
+  rows: number,
+  cols: number,
+  rnd: () => number = Math.random,
+): ChaosConfig {
   const lim = chaosLimits(rows, cols);
   const pick = (max: number) => Math.floor(rnd() * (max + 1));
   return clampChaosConfig(
@@ -174,7 +185,12 @@ function reasonablySpread(indices: number[], rows: number, cols: number) {
  * Builds a Chaos Grid board containing exactly the requested tile quantities.
  * Retries until the layout passes connectivity / distribution validation.
  */
-export function buildChaosBoard(rows: number, cols: number, cfg: ChaosConfig, seed: number): BoardState {
+export function buildChaosBoard(
+  rows: number,
+  cols: number,
+  cfg: ChaosConfig,
+  seed: number,
+): BoardState {
   const total = rows * cols;
   const config = clampChaosConfig(cfg, rows, cols);
   const needed = specialCellCount(config);

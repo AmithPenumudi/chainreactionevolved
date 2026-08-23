@@ -214,12 +214,7 @@ function ToggleRow({
 }) {
   return (
     <Row label={label} hint={hint}>
-      <Toggle
-        on={settings[k]}
-        disabled={disabled}
-        onChange={(v) => update(k, v)}
-        label={label}
-      />
+      <Toggle on={settings[k]} disabled={disabled} onChange={(v) => update(k, v)} label={label} />
     </Row>
   );
 }

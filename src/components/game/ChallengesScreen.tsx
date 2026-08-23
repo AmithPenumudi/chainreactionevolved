@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import {
-  ChallengeCategory, ChallengeDef, MASTERY_GROUPS, activeDefs, formatCountdown, isComplete,
-  msUntilDailyReset, msUntilWeeklyReset, progressOf, useChallenges,
+  ChallengeCategory,
+  ChallengeDef,
+  MASTERY_GROUPS,
+  activeDefs,
+  formatCountdown,
+  isComplete,
+  msUntilDailyReset,
+  msUntilWeeklyReset,
+  progressOf,
+  useChallenges,
 } from "@/game/challenges";
 
 import { DIFFICULTY_LABEL, PUZZLES } from "@/game/puzzles";
@@ -18,7 +26,6 @@ const TABS: { value: ChallengeCategory; label: string }[] = [
 ];
 
 export function ChallengesScreen({ onBack, onPuzzles }: Props) {
-
   const { state, claim } = useChallenges();
   const [tab, setTab] = useState<ChallengeCategory>("daily");
   const [now, setNow] = useState<number | null>(null);
@@ -51,7 +58,9 @@ export function ChallengesScreen({ onBack, onPuzzles }: Props) {
           >
             ← MENU
           </button>
-          <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">CHALLENGES</h1>
+          <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
+            CHALLENGES
+          </h1>
         </div>
 
         <div className="mt-8 flex gap-1 rounded-md border border-white/10 bg-white/[0.02] p-1">
@@ -60,7 +69,9 @@ export function ChallengesScreen({ onBack, onPuzzles }: Props) {
               key={t.value}
               onClick={() => setTab(t.value)}
               className={`flex-1 rounded-sm px-2 py-1.5 text-[10px] tracking-[0.2em] transition ${
-                tab === t.value ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+                tab === t.value
+                  ? "bg-white/10 text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {t.label}
@@ -117,17 +128,13 @@ export function ChallengesScreen({ onBack, onPuzzles }: Props) {
           </div>
         )}
 
-
         <section className="mt-10">
           <h2 className="mb-3 text-[10px] tracking-[0.35em] text-muted-foreground">
             PUZZLE CHALLENGES
           </h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {PUZZLES.slice(0, 4).map((p) => (
-              <div
-                key={p.id}
-                className="rounded-md border border-white/10 bg-white/[0.02] p-3"
-              >
+              <div key={p.id} className="rounded-md border border-white/10 bg-white/[0.02] p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-display text-xs tracking-[0.2em] text-foreground">
                     {p.name}
@@ -150,7 +157,6 @@ export function ChallengesScreen({ onBack, onPuzzles }: Props) {
           )}
         </section>
 
-
         <div className="mt-10 text-center text-[10px] tracking-[0.3em] text-muted-foreground">
           CHALLENGE REWARDS ARE COSMETIC · NO GAMEPLAY ADVANTAGE
         </div>
@@ -160,7 +166,11 @@ export function ChallengesScreen({ onBack, onPuzzles }: Props) {
 }
 
 function ChallengeRow({
-  def, progress, complete, claimed, onClaim,
+  def,
+  progress,
+  complete,
+  claimed,
+  onClaim,
 }: {
   def: ChallengeDef;
   progress: number;
@@ -172,15 +182,15 @@ function ChallengeRow({
   return (
     <div
       className={`rounded-md border p-3 transition-colors ${
-        complete && !claimed
-          ? "border-white/30 bg-white/[0.06]"
-          : "border-white/10 bg-white/[0.02]"
+        complete && !claimed ? "border-white/30 bg-white/[0.06]" : "border-white/10 bg-white/[0.02]"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`font-display text-xs tracking-[0.2em] ${claimed ? "text-muted-foreground" : ""}`}>
+            <span
+              className={`font-display text-xs tracking-[0.2em] ${claimed ? "text-muted-foreground" : ""}`}
+            >
               {def.name}
             </span>
             {def.tag && (
@@ -205,7 +215,6 @@ function ChallengeRow({
         <div className="mt-3 text-[10px] tracking-[0.25em] text-muted-foreground">
           {def.badge ? `CLAIMED · ${def.badge} BADGE EARNED` : "CLAIMED"}
         </div>
-
       ) : complete ? (
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-[10px] tracking-[0.25em]">CHALLENGE COMPLETE</span>

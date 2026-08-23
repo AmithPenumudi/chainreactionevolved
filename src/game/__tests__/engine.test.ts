@@ -24,7 +24,14 @@ function twoPlayers(): PlayerConfig[] {
 }
 
 function classicState(rows: number, cols: number, players = twoPlayers()): GameState {
-  return makeInitialState(players, rows, cols, "classic", DEFAULT_RULES.classic, MODE_CONFIGS.classic);
+  return makeInitialState(
+    players,
+    rows,
+    cols,
+    "classic",
+    DEFAULT_RULES.classic,
+    MODE_CONFIGS.classic,
+  );
 }
 
 describe("criticalMass", () => {

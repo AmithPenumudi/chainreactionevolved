@@ -80,7 +80,10 @@ describe("xpForMatch", () => {
 
 describe("applyMatch", () => {
   it("accumulates per-mode stats", () => {
-    const p1 = applyMatch(DEFAULT_PROFILE, outcome({ won: true, eliminations: 1, cellsCaptured: 5 }));
+    const p1 = applyMatch(
+      DEFAULT_PROFILE,
+      outcome({ won: true, eliminations: 1, cellsCaptured: 5 }),
+    );
     expect(p1.stats.classic.games).toBe(1);
     expect(p1.stats.classic.wins).toBe(1);
     expect(p1.stats.classic.eliminations).toBe(1);
@@ -136,19 +139,38 @@ describe("totalStats", () => {
 describe("favoriteAbility", () => {
   it("returns null when no abilities have been used", () => {
     const s: ModeStats = {
-      games: 0, wins: 0, eliminations: 0, cellsCaptured: 0, explosions: 0, largestChain: 0,
-      abilitiesUsed: 0, energyEarned: 0, energySpent: 0, abilityCounts: {},
-      portalTransfers: 0, amplifierExplosions: 0, powerTilesCaptured: 0,
+      games: 0,
+      wins: 0,
+      eliminations: 0,
+      cellsCaptured: 0,
+      explosions: 0,
+      largestChain: 0,
+      abilitiesUsed: 0,
+      energyEarned: 0,
+      energySpent: 0,
+      abilityCounts: {},
+      portalTransfers: 0,
+      amplifierExplosions: 0,
+      powerTilesCaptured: 0,
     };
     expect(favoriteAbility(s)).toBeNull();
   });
 
   it("returns the most-used ability", () => {
     const s: ModeStats = {
-      games: 0, wins: 0, eliminations: 0, cellsCaptured: 0, explosions: 0, largestChain: 0,
-      abilitiesUsed: 0, energyEarned: 0, energySpent: 0,
+      games: 0,
+      wins: 0,
+      eliminations: 0,
+      cellsCaptured: 0,
+      explosions: 0,
+      largestChain: 0,
+      abilitiesUsed: 0,
+      energyEarned: 0,
+      energySpent: 0,
       abilityCounts: { shield: 3, emp: 7, fortify: 1 },
-      portalTransfers: 0, amplifierExplosions: 0, powerTilesCaptured: 0,
+      portalTransfers: 0,
+      amplifierExplosions: 0,
+      powerTilesCaptured: 0,
     };
     expect(favoriteAbility(s)).toBe("emp");
   });

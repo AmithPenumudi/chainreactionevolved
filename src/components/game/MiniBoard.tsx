@@ -177,7 +177,9 @@ export function MiniBoard({
         </div>
       </div>
 
-      {caption && <div className="mt-3 text-center text-[11px] text-muted-foreground">{caption}</div>}
+      {caption && (
+        <div className="mt-3 text-center text-[11px] text-muted-foreground">{caption}</div>
+      )}
     </div>
   );
 }

@@ -26,15 +26,24 @@ interface Props {
 }
 
 export function CellView({
-  cell, row, col, rows, cols, cellSize, criticalMass: cm,
-  playerColorIndex, onClick, clickable, exploding, highlight,
-  orbMotion = true, reducedMotion = false, showCritical = true,
+  cell,
+  row,
+  col,
+  rows,
+  cols,
+  cellSize,
+  criticalMass: cm,
+  playerColorIndex,
+  onClick,
+  clickable,
+  exploding,
+  highlight,
+  orbMotion = true,
+  reducedMotion = false,
+  showCritical = true,
 }: Props) {
   const orbsForVisual = Math.min(cell.orbs, cm - 1 > 0 ? cm - 1 : cell.orbs);
-  const instability =
-    cell.orbs === 0 ? 0 :
-    cell.orbs >= cm - 1 ? 3 :
-    cell.orbs === cm - 2 ? 2 : 1;
+  const instability = cell.orbs === 0 ? 0 : cell.orbs >= cm - 1 ? 3 : cell.orbs === cm - 2 ? 2 : 1;
 
   const color = cell.owner !== null ? colorFor(playerColorIndex(cell.owner)) : "transparent";
 
@@ -42,28 +51,23 @@ export function CellView({
   const positions = clusterPositions(orbsForVisual, orbSize);
 
   const spinEnabled = orbMotion && instability > 0;
-  const baseSpin =
-    instability >= 3 ? 3.2 :
-    instability === 2 ? 5.5 : 9;
+  const baseSpin = instability >= 3 ? 3.2 : instability === 2 ? 5.5 : 9;
   const spinDuration = `${reducedMotion ? baseSpin * 2.5 : baseSpin}s`;
 
   const isWall = cell.tile === "wall";
 
   const isCritical = showCritical && cell.orbs > 0 && cell.orbs >= cm - 1;
 
-  const bg = isWall
-    ? "oklch(0.32 0.008 260)"
-    : "oklch(0.18 0.008 260)";
+  const bg = isWall ? "oklch(0.32 0.008 260)" : "oklch(0.18 0.008 260)";
 
   const ringStyle =
     highlight === "target"
       ? "0 0 0 2px oklch(0.72 0.18 235 / 0.7) inset"
       : highlight === "selected"
-      ? "0 0 0 2px oklch(0.78 0.22 60 / 0.85) inset"
-      : isCritical
-      ? "0 0 0 1px oklch(0.85 0.02 260 / 0.28) inset"
-      : undefined;
-
+        ? "0 0 0 2px oklch(0.78 0.22 60 / 0.85) inset"
+        : isCritical
+          ? "0 0 0 1px oklch(0.85 0.02 260 / 0.28) inset"
+          : undefined;
 
   return (
     <button
@@ -270,7 +274,11 @@ function TileGlyph({
 function clusterPositions(count: number, s: number): { x: number; y: number }[] {
   if (count <= 0) return [];
   if (count === 1) return [{ x: 0, y: 0 }];
-  if (count === 2) return [{ x: -s / 2, y: 0 }, { x: s / 2, y: 0 }];
+  if (count === 2)
+    return [
+      { x: -s / 2, y: 0 },
+      { x: s / 2, y: 0 },
+    ];
   if (count === 3) {
     const R = s / Math.sqrt(3);
     return [

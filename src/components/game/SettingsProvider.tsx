@@ -1,6 +1,10 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  DEFAULT_SETTINGS, GameSettings, SettingsContext, loadSettings, saveSettings,
+  DEFAULT_SETTINGS,
+  GameSettings,
+  SettingsContext,
+  loadSettings,
+  saveSettings,
 } from "@/game/settings";
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -11,16 +15,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(loadSettings());
   }, []);
 
-  const update = useCallback(
-    <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
-      setSettings((s) => {
-        const next = { ...s, [key]: value };
-        saveSettings(next);
-        return next;
-      });
-    },
-    []
-  );
+  const update = useCallback(<K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
+    setSettings((s) => {
+      const next = { ...s, [key]: value };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
 
   const reset = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);

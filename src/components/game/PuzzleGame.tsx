@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyMove, cellsOwnedBy, cloneBoard, commitMove, effectiveCriticalMass, idx,
-  makeInitialState, MODE_CONFIGS, type BoardState, type GameState, type PlayerConfig,
+  applyMove,
+  cellsOwnedBy,
+  cloneBoard,
+  commitMove,
+  effectiveCriticalMass,
+  idx,
+  makeInitialState,
+  MODE_CONFIGS,
+  type BoardState,
+  type GameState,
+  type PlayerConfig,
 } from "@/game/engine";
 import { CellView } from "./CellView";
 import { colorFor } from "@/game/colors";
@@ -9,9 +18,18 @@ import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
 import { useProfile } from "@/game/profile";
 import {
-  applySolve, buildPuzzleBoard, DIFFICULTY_LABEL, highlightedCells, loadPuzzleProgress,
-  medalFor, MEDAL_COLOR, MEDAL_LABEL, objectiveText, savePuzzleProgress,
-  type Medal, type PuzzleDef,
+  applySolve,
+  buildPuzzleBoard,
+  DIFFICULTY_LABEL,
+  highlightedCells,
+  loadPuzzleProgress,
+  medalFor,
+  MEDAL_COLOR,
+  MEDAL_LABEL,
+  objectiveText,
+  savePuzzleProgress,
+  type Medal,
+  type PuzzleDef,
 } from "@/game/puzzles";
 
 interface Props {
@@ -220,7 +238,9 @@ export function PuzzleGame({ puzzle, onBack, onNext }: Props) {
         {puzzle.hint && status.kind === "playing" && (
           <div className="mt-5 flex justify-center">
             {showHint ? (
-              <div className="max-w-md text-center text-xs text-muted-foreground">Hint: {puzzle.hint}</div>
+              <div className="max-w-md text-center text-xs text-muted-foreground">
+                Hint: {puzzle.hint}
+              </div>
             ) : (
               <button
                 onClick={() => setShowHint(true)}
@@ -280,9 +300,7 @@ export function PuzzleGame({ puzzle, onBack, onNext }: Props) {
               </>
             ) : (
               <>
-                <div className="font-display text-2xl font-black tracking-tight">
-                  OUT OF MOVES
-                </div>
+                <div className="font-display text-2xl font-black tracking-tight">OUT OF MOVES</div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   Unlimited retries — reset and try another line.
                 </div>

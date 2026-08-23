@@ -17,7 +17,14 @@ function twoPlayers(): PlayerConfig[] {
 }
 
 function classicState(rows: number, cols: number): GameState {
-  return makeInitialState(twoPlayers(), rows, cols, "classic", DEFAULT_RULES.classic, MODE_CONFIGS.classic);
+  return makeInitialState(
+    twoPlayers(),
+    rows,
+    cols,
+    "classic",
+    DEFAULT_RULES.classic,
+    MODE_CONFIGS.classic,
+  );
 }
 
 describe("chooseAIMove", () => {
@@ -27,14 +34,17 @@ describe("chooseAIMove", () => {
     expect(chooseAIMove(state, "easy")).toBeNull();
   });
 
-  it.each(["easy", "normal", "hard"] as const)("%s difficulty always returns a legal move", (difficulty) => {
-    const state = classicState(5, 5);
-    for (let i = 0; i < 10; i++) {
-      const move = chooseAIMove(state, difficulty);
-      expect(move).not.toBeNull();
-      expect(canPlace(state, move!.r, move!.c)).toBe(true);
-    }
-  });
+  it.each(["easy", "normal", "hard"] as const)(
+    "%s difficulty always returns a legal move",
+    (difficulty) => {
+      const state = classicState(5, 5);
+      for (let i = 0; i < 10; i++) {
+        const move = chooseAIMove(state, difficulty);
+        expect(move).not.toBeNull();
+        expect(canPlace(state, move!.r, move!.c)).toBe(true);
+      }
+    },
+  );
 
   it("hard AI takes an immediately winning move when one is available", () => {
     const state = classicState(3, 3);

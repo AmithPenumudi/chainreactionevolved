@@ -9,10 +9,27 @@ interface Props {
   onPuzzles: () => void;
 }
 
-export function HomeScreen({ onQuickPlay, onSettings, onProfile, onHowToPlay, onChallenges, onPuzzles }: Props) {
+export function HomeScreen({
+  onQuickPlay,
+  onSettings,
+  onProfile,
+  onHowToPlay,
+  onChallenges,
+  onPuzzles,
+}: Props) {
   // Generated after mount only — random values would mismatch during hydration.
   const [particles, setParticles] = useState<
-    { id: number; left: number; top: number; dx: number; dy: number; delay: number; dur: number; size: number; hue: string }[]
+    {
+      id: number;
+      left: number;
+      top: number;
+      dx: number;
+      dy: number;
+      delay: number;
+      dur: number;
+      size: number;
+      hue: string;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -27,10 +44,9 @@ export function HomeScreen({ onQuickPlay, onSettings, onProfile, onHowToPlay, on
         dur: 8 + Math.random() * 10,
         size: 2 + Math.random() * 3,
         hue: Math.random() > 0.5 ? "var(--p1)" : "var(--p4)",
-      }))
+      })),
     );
   }, []);
-
 
   const menu = [
     { label: "QUICK PLAY", enabled: true, onClick: onQuickPlay },
@@ -82,7 +98,8 @@ export function HomeScreen({ onQuickPlay, onSettings, onProfile, onHowToPlay, on
             EVOLVED
           </div>
           <p className="mt-6 max-w-md text-sm text-muted-foreground sm:text-base">
-            A modern take on the classic grid-based strategy game. Detonate energy cells, trigger cascading chains, and eliminate your opponents.
+            A modern take on the classic grid-based strategy game. Detonate energy cells, trigger
+            cascading chains, and eliminate your opponents.
           </p>
         </div>
 
@@ -93,9 +110,10 @@ export function HomeScreen({ onQuickPlay, onSettings, onProfile, onHowToPlay, on
               onClick={item.onClick}
               disabled={!item.enabled}
               className={`group relative overflow-hidden rounded-lg border px-6 py-3 text-left font-display text-sm tracking-widest transition-all
-                ${item.enabled
-                  ? "border-[oklch(0.72_0.18_235/0.5)] bg-[oklch(0.72_0.18_235/0.08)] text-white hover:bg-[oklch(0.72_0.18_235/0.18)] hover:border-[oklch(0.72_0.18_235)] hover:translate-x-1"
-                  : "cursor-not-allowed border-white/5 bg-white/[0.02] text-muted-foreground opacity-60"
+                ${
+                  item.enabled
+                    ? "border-[oklch(0.72_0.18_235/0.5)] bg-[oklch(0.72_0.18_235/0.08)] text-white hover:bg-[oklch(0.72_0.18_235/0.18)] hover:border-[oklch(0.72_0.18_235)] hover:translate-x-1"
+                    : "cursor-not-allowed border-white/5 bg-white/[0.02] text-muted-foreground opacity-60"
                 }`}
             >
               <span className="flex items-center justify-between">

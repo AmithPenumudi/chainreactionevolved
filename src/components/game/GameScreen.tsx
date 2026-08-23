@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyMove, applyShrink, canPlace, cellsOwnedBy, commitMove, effectiveCriticalMass,
-  GameState, makeInitialState, MODE_CONFIGS, MoveResult, neighbors,
-  orbsOwnedBy, forfeitTurn,
+  applyMove,
+  applyShrink,
+  canPlace,
+  cellsOwnedBy,
+  commitMove,
+  effectiveCriticalMass,
+  GameState,
+  makeInitialState,
+  MODE_CONFIGS,
+  MoveResult,
+  neighbors,
+  orbsOwnedBy,
+  forfeitTurn,
 } from "@/game/engine";
 import { AbilityId, abilityById, castAbility } from "@/game/abilities";
 import { getArenaMap } from "@/game/arena-maps";
@@ -17,7 +27,6 @@ import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
 import { statsModeFor, useProfile } from "@/game/profile";
 import { useChallenges } from "@/game/challenges";
-
 
 interface Props {
   config: MatchConfig;
@@ -58,13 +67,20 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   /** The local human player whose progression is tracked ("you"). */
   const youId = useMemo(() => config.players.find((p) => !p.isAI)?.id ?? null, [config.players]);
   const tally = useRef({
-    eliminations: 0, cellsCaptured: 0, explosions: 0, largestChain: 0,
-    abilitiesUsed: 0, energyEarned: 0, energySpent: 0, orbsPlaced: 0,
+    eliminations: 0,
+    cellsCaptured: 0,
+    explosions: 0,
+    largestChain: 0,
+    abilitiesUsed: 0,
+    energyEarned: 0,
+    energySpent: 0,
+    orbsPlaced: 0,
     abilityCounts: {} as Record<string, number>,
-    portalTransfers: 0, amplifierExplosions: 0, powerTilesCaptured: 0,
+    portalTransfers: 0,
+    amplifierExplosions: 0,
+    powerTilesCaptured: 0,
   });
   const recorded = useRef(false);
-
 
   const [state, setState] = useState<GameState>(() => {
     const board =
@@ -100,7 +116,6 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   // Turn confirmation (Settings → Gameplay): first tap selects, second confirms.
   const [pendingCell, setPendingCell] = useState<[number, number] | null>(null);
 
-
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (state.winner !== null || state.draw) return;
@@ -127,7 +142,6 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     setSelectedAbility(null);
     setAbilityFirstTarget(null);
     setPendingCell(null);
-
   }, [state.currentPlayerIdx]);
 
   const cellSize = useCellSize(state.board.rows, state.board.cols);
@@ -146,7 +160,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     if (config.modeKind === "abilities") return "Abilities";
     if (config.modeKind === "arena") return `Arena · ${getArenaMap(config.arenaMapId!).label}`;
     const labels: Record<string, string> = {
-      classic: "Classic", blitz: "Blitz", "sudden-death": "Sudden Death", custom: "Custom",
+      classic: "Classic",
+      blitz: "Blitz",
+      "sudden-death": "Sudden Death",
+      custom: "Custom",
     };
     return labels[state.mode] ?? "Classic";
   }, [config.modeKind, config.arenaMapId, state.mode]);
@@ -308,7 +325,6 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     await playMove(r, c);
   };
 
-
   const castZeroTargetAbility = async (id: AbilityId) => {
     const def = abilityById(id);
     if (def.targets !== 0) return;
@@ -371,13 +387,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       const step = res.steps[i];
       const keys = new Set(step.explosions.map((e) => `${e.row}:${e.col}`));
 
-      const anticipation = Math.round((chain < 3 ? 180 : chain < 10 ? 140 : chain < 20 ? 100 : 80) * sf);
+      const anticipation = Math.round(
+        (chain < 3 ? 180 : chain < 10 ? 140 : chain < 20 ? 100 : 80) * sf,
+      );
       const travel = Math.round((chain < 3 ? 260 : chain < 10 ? 200 : chain < 20 ? 150 : 110) * sf);
 
       if (step.explosions.length > 0) playSfx(settings, "explode");
       setAnim((a) => ({ ...a, explodingKeys: keys, flying: [] }));
       await sleep(anticipation);
-
 
       const orbSize = Math.max(10, Math.round(cellSize * 0.32));
       const flying: FlyingOrb[] = [];
@@ -442,7 +459,13 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
       await sleep(Math.round(60 * sf));
     }
-    setAnim((a) => ({ ...a, running: false, displayBoard: res.boardAfter, explodingKeys: new Set(), flying: [] }));
+    setAnim((a) => ({
+      ...a,
+      running: false,
+      displayBoard: res.boardAfter,
+      explodingKeys: new Set(),
+      flying: [],
+    }));
   };
 
   const animateShrink = async (): Promise<void> => {
@@ -475,19 +498,35 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     return (
       <div className="min-h-screen grid place-items-center px-6 py-12">
         <div className="text-center">
-          <div className="font-display text-6xl font-black tracking-tight text-foreground">DRAW</div>
-          <div className="mt-2 text-sm text-muted-foreground">All active players eliminated simultaneously.</div>
+          <div className="font-display text-6xl font-black tracking-tight text-foreground">
+            DRAW
+          </div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            All active players eliminated simultaneously.
+          </div>
           <div className="mt-8 flex justify-center gap-3">
-            <button onClick={onRematch} className="rounded-md bg-foreground px-6 py-2 font-display text-xs tracking-[0.2em] text-background transition hover:bg-foreground/80">REMATCH</button>
-            <button onClick={onExit} className="rounded-md border border-foreground/30 px-6 py-2 font-display text-xs tracking-[0.2em] transition hover:bg-foreground/10">MENU</button>
+            <button
+              onClick={onRematch}
+              className="rounded-md bg-foreground px-6 py-2 font-display text-xs tracking-[0.2em] text-background transition hover:bg-foreground/80"
+            >
+              REMATCH
+            </button>
+            <button
+              onClick={onExit}
+              className="rounded-md border border-foreground/30 px-6 py-2 font-display text-xs tracking-[0.2em] transition hover:bg-foreground/10"
+            >
+              MENU
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  const boardWidth = state.board.cols * cellSize + (state.board.cols - 1) * CELL_GAP + BOARD_PADDING * 2;
-  const boardHeight = state.board.rows * cellSize + (state.board.rows - 1) * CELL_GAP + BOARD_PADDING * 2;
+  const boardWidth =
+    state.board.cols * cellSize + (state.board.cols - 1) * CELL_GAP + BOARD_PADDING * 2;
+  const boardHeight =
+    state.board.rows * cellSize + (state.board.rows - 1) * CELL_GAP + BOARD_PADDING * 2;
 
   // Compute highlight map for ability targeting.
   const highlight = new Map<string, "target" | "selected">();
@@ -509,7 +548,6 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   }
   if (pendingCell) highlight.set(`${pendingCell[0]}:${pendingCell[1]}`, "selected");
 
-
   const currentPid = currentPlayer.id;
   const extraPlacement = state.extraPlacementFor === currentPid;
 
@@ -518,7 +556,12 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       <div className="mx-auto max-w-[1600px]">
         <header className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
           <div className="min-w-0">
-            <button onClick={onExit} className="text-[10px] tracking-[0.3em] text-muted-foreground hover:text-foreground">← MENU</button>
+            <button
+              onClick={onExit}
+              className="text-[10px] tracking-[0.3em] text-muted-foreground hover:text-foreground"
+            >
+              ← MENU
+            </button>
             <h1 className="mt-1 truncate font-display text-lg tracking-widest sm:text-xl">
               {modeLabel.toUpperCase()} · {state.board.rows}×{state.board.cols}
             </h1>
@@ -561,7 +604,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                       ${isDead ? "opacity-40" : ""}`}
                   >
                     {isCurrent && (
-                      <span className="absolute inset-y-0 left-0 w-1 rounded-l-md" style={{ background: color }} />
+                      <span
+                        className="absolute inset-y-0 left-0 w-1 rounded-l-md"
+                        style={{ background: color }}
+                      />
                     )}
                     <div className="flex items-center gap-2">
                       <span
@@ -579,7 +625,11 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                           CPU·{(p.difficulty ?? "normal").slice(0, 1).toUpperCase()}
                         </span>
                       )}
-                      {isDead && <span className="ml-auto text-[10px] tracking-widest text-destructive">OUT</span>}
+                      {isDead && (
+                        <span className="ml-auto text-[10px] tracking-widest text-destructive">
+                          OUT
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                       <span>{owned} cells</span>
@@ -600,7 +650,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                       </div>
                     )}
                     {modeConfig.specialTiles && state.powerBonus[p.id] > 0 && !isDead && (
-                      <div className="mt-1 text-[9px] tracking-[0.2em] text-[oklch(0.78_0.14_60)]">⚡ POWER READY</div>
+                      <div className="mt-1 text-[9px] tracking-[0.2em] text-[oklch(0.78_0.14_60)]">
+                        ⚡ POWER READY
+                      </div>
                     )}
                   </div>
                 );
@@ -613,7 +665,8 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
             <div
               className="relative rounded-md"
               style={{
-                width: boardWidth, height: boardHeight,
+                width: boardWidth,
+                height: boardHeight,
                 background: "oklch(0.18 0.008 260)",
                 border: "1px solid oklch(0.30 0.008 260 / 0.7)",
                 padding: BOARD_PADDING,
@@ -636,7 +689,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                     if (selectedAbility) {
                       const def = abilityById(selectedAbility);
                       const step: 0 | 1 = abilityFirstTarget ? 1 : 0;
-                      canP = clickable && def.validate(state, r, c, step, abilityFirstTarget ?? undefined);
+                      canP =
+                        clickable &&
+                        def.validate(state, r, c, step, abilityFirstTarget ?? undefined);
                     } else {
                       canP = clickable && canPlace(state, r, c);
                     }
@@ -658,10 +713,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                         orbMotion={settings.orbMotion}
                         reducedMotion={settings.reducedMotion}
                         showCritical={settings.showCriticalCells}
-
                       />
                     );
-                  })
+                  }),
                 )}
               </div>
 
@@ -672,10 +726,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                     key={f.key}
                     className="absolute rounded-full"
                     style={{
-                      left: f.x, top: f.y, width: f.size, height: f.size,
+                      left: f.x,
+                      top: f.y,
+                      width: f.size,
+                      height: f.size,
                       background: `radial-gradient(circle at 32% 30%, oklch(from ${f.color} calc(l + 0.18) c h) 0%, ${f.color} 45%, oklch(from ${f.color} calc(l - 0.14) c h) 100%)`,
                       // @ts-expect-error css vars
-                      "--tx": `${f.tx}px`, "--ty": `${f.ty}px`,
+                      "--tx": `${f.tx}px`,
+                      "--ty": `${f.ty}px`,
                       animation: `orb-fly ${f.duration}ms cubic-bezier(0.4, 0, 0.6, 1) forwards`,
                       willChange: "transform",
                     }}
@@ -684,12 +742,18 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               </div>
 
               {anim.showChainBanner && (
-                <div key={anim.showChainBanner.key} className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div
+                  key={anim.showChainBanner.key}
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
                   <div className="combo-banner text-center">
                     <div className="font-display text-[10px] tracking-[0.5em] text-foreground/60">
                       {chainLabel(anim.showChainBanner.count)}
                     </div>
-                    <div className="font-display text-5xl font-bold sm:text-7xl" style={{ color: currentColor }}>
+                    <div
+                      className="font-display text-5xl font-bold sm:text-7xl"
+                      style={{ color: currentColor }}
+                    >
                       ×{anim.showChainBanner.count}
                     </div>
                   </div>
@@ -697,10 +761,17 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               )}
 
               {anim.showShrinkBanner && (
-                <div key={anim.showShrinkBanner.key} className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div
+                  key={anim.showShrinkBanner.key}
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
                   <div className="shrink-banner text-center">
-                    <div className="font-display text-[10px] tracking-[0.5em] text-destructive/80">SUDDEN DEATH</div>
-                    <div className="font-display text-5xl font-bold text-destructive sm:text-7xl">SHRINK</div>
+                    <div className="font-display text-[10px] tracking-[0.5em] text-destructive/80">
+                      SUDDEN DEATH
+                    </div>
+                    <div className="font-display text-5xl font-bold text-destructive sm:text-7xl">
+                      SHRINK
+                    </div>
                   </div>
                 </div>
               )}
@@ -727,12 +798,12 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                     {anim.running
                       ? "REACTING…"
                       : currentPlayer.isAI
-                      ? "CPU THINKING…"
-                      : selectedAbility
-                      ? `SELECT ${abilityById(selectedAbility).name.toUpperCase()} TARGET`
-                      : extraPlacement
-                      ? "EXTRA PLACEMENT"
-                      : "YOUR MOVE"}
+                        ? "CPU THINKING…"
+                        : selectedAbility
+                          ? `SELECT ${abilityById(selectedAbility).name.toUpperCase()} TARGET`
+                          : extraPlacement
+                            ? "EXTRA PLACEMENT"
+                            : "YOUR MOVE"}
                   </div>
                 </div>
               </div>
@@ -743,7 +814,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               )}
               {selectedAbility && (
                 <button
-                  onClick={() => { setSelectedAbility(null); setAbilityFirstTarget(null); }}
+                  onClick={() => {
+                    setSelectedAbility(null);
+                    setAbilityFirstTarget(null);
+                  }}
                   className="mt-2 w-full rounded-md border border-white/10 py-1 text-[10px] tracking-[0.25em] text-muted-foreground hover:text-white"
                 >
                   CANCEL
@@ -763,15 +837,22 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
             {state.rules.turnTimeMs > 0 && (
               <div className="rounded-md border border-foreground/10 p-3">
                 <div className="text-[10px] tracking-[0.3em] text-muted-foreground">TURN TIMER</div>
-                <div className="mt-1 font-display text-2xl tabular-nums" style={{ color: turnTimeLeft < 3000 ? "oklch(0.6 0.2 25)" : "inherit" }}>
+                <div
+                  className="mt-1 font-display text-2xl tabular-nums"
+                  style={{ color: turnTimeLeft < 3000 ? "oklch(0.6 0.2 25)" : "inherit" }}
+                >
                   {turnTimeLeft === Infinity ? "--" : formatTimer(turnTimeLeft)}
                 </div>
                 <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full transition-all duration-100 ease-linear"
                     style={{
-                      width: turnTimeLeft === Infinity ? "0%" : `${(turnTimeLeft / state.rules.turnTimeMs) * 100}%`,
-                      background: turnTimeLeft < 3000 ? "oklch(0.6 0.2 25)" : "oklch(0.72 0.18 235)",
+                      width:
+                        turnTimeLeft === Infinity
+                          ? "0%"
+                          : `${(turnTimeLeft / state.rules.turnTimeMs) * 100}%`,
+                      background:
+                        turnTimeLeft < 3000 ? "oklch(0.6 0.2 25)" : "oklch(0.72 0.18 235)",
                     }}
                   />
                 </div>
@@ -782,22 +863,30 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
                 <div className="text-[10px] tracking-[0.3em] text-destructive/80">SHRINK IN</div>
                 <div className="mt-1 font-display text-2xl tabular-nums text-destructive">
-                  {shrinkTurnsLeft === 0 ? "NOW" : `${shrinkTurnsLeft} TURN${shrinkTurnsLeft === 1 ? "" : "S"}`}
+                  {shrinkTurnsLeft === 0
+                    ? "NOW"
+                    : `${shrinkTurnsLeft} TURN${shrinkTurnsLeft === 1 ? "" : "S"}`}
                 </div>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-2">
-              <Stat label="ROUND" value={String(Math.floor(state.turn / Math.max(1, activePlayers.length)) + 1)} />
+              <Stat
+                label="ROUND"
+                value={String(Math.floor(state.turn / Math.max(1, activePlayers.length)) + 1)}
+              />
               <Stat label="ALIVE" value={`${activePlayers.length}/${state.players.length}`} />
               <Stat label="BIGGEST CHAIN" value={String(state.largestChain)} />
               <Stat label="EXPLOSIONS" value={String(state.totalExplosions)} />
             </div>
 
             <div className="rounded-md border border-foreground/10 p-3 text-xs text-muted-foreground">
-              <div className="font-display text-[10px] tracking-[0.3em] text-foreground/70">HOW</div>
+              <div className="font-display text-[10px] tracking-[0.3em] text-foreground/70">
+                HOW
+              </div>
               <p className="mt-1 leading-relaxed">
-                Place orbs in empty cells or your own. Corners hold 2, edges 3, interior 4. Reach the limit to ignite a chain reaction.
+                Place orbs in empty cells or your own. Corners hold 2, edges 3, interior 4. Reach
+                the limit to ignite a chain reaction.
               </p>
             </div>
           </aside>
@@ -835,15 +924,38 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
             >
               <div className="flex items-center justify-between">
                 <div className="font-display text-sm tracking-[0.3em]">TILE INFO</div>
-                <button onClick={() => setShowTileInfo(false)} className="text-xs text-muted-foreground hover:text-white">CLOSE</button>
+                <button
+                  onClick={() => setShowTileInfo(false)}
+                  className="text-xs text-muted-foreground hover:text-white"
+                >
+                  CLOSE
+                </button>
               </div>
               <ul className="mt-4 space-y-2 text-xs">
-                <TileInfo name="POWER TILE" text="Capture from another player (or claim when neutral) to earn one bonus placement on your next turn." />
-                <TileInfo name="PORTAL" text="Playable cell. Orbs entering via an explosion teleport to the paired portal and continue the chain there." />
-                <TileInfo name="AMPLIFIER" text="Playable cell. When it explodes, it sends TWO orbs to each valid neighbor instead of one." />
-                <TileInfo name="REACTOR" text="Playable cell. While you own it, its critical mass is one higher — slower to detonate, but the payoff chain is bigger." />
-                <TileInfo name="WALL" text="Not playable. Blocks placement and explosion orbs — adjacent cells' critical mass drops accordingly." />
-                <TileInfo name="DEAD ZONE" text="Not playable. Any orb that lands here — placed or flying in from an explosion — is destroyed for good." />
+                <TileInfo
+                  name="POWER TILE"
+                  text="Capture from another player (or claim when neutral) to earn one bonus placement on your next turn."
+                />
+                <TileInfo
+                  name="PORTAL"
+                  text="Playable cell. Orbs entering via an explosion teleport to the paired portal and continue the chain there."
+                />
+                <TileInfo
+                  name="AMPLIFIER"
+                  text="Playable cell. When it explodes, it sends TWO orbs to each valid neighbor instead of one."
+                />
+                <TileInfo
+                  name="REACTOR"
+                  text="Playable cell. While you own it, its critical mass is one higher — slower to detonate, but the payoff chain is bigger."
+                />
+                <TileInfo
+                  name="WALL"
+                  text="Not playable. Blocks placement and explosion orbs — adjacent cells' critical mass drops accordingly."
+                />
+                <TileInfo
+                  name="DEAD ZONE"
+                  text="Not playable. Any orb that lands here — placed or flying in from an explosion — is destroyed for good."
+                />
               </ul>
             </div>
           </div>
@@ -878,8 +990,12 @@ function chainLabel(n: number): string {
   return "CHAIN";
 }
 
-function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
-function formatTimer(ms: number) { return (ms / 1000).toFixed(1); }
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
+function formatTimer(ms: number) {
+  return (ms / 1000).toFixed(1);
+}
 function formatDur(ms: number) {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
@@ -894,7 +1010,9 @@ function useCellSize(rows: number, cols: number) {
     window.addEventListener("resize", on);
     return () => window.removeEventListener("resize", on);
   }, [rows, cols]);
-  useEffect(() => { setSize(computeSize(rows, cols)); }, [rows, cols]);
+  useEffect(() => {
+    setSize(computeSize(rows, cols));
+  }, [rows, cols]);
   return size;
 }
 

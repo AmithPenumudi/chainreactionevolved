@@ -61,9 +61,19 @@ export function avatarFor(id: string) {
 
 export function emptyModeStats(): ModeStats {
   return {
-    games: 0, wins: 0, eliminations: 0, cellsCaptured: 0, explosions: 0, largestChain: 0,
-    abilitiesUsed: 0, energyEarned: 0, energySpent: 0, abilityCounts: {},
-    portalTransfers: 0, amplifierExplosions: 0, powerTilesCaptured: 0,
+    games: 0,
+    wins: 0,
+    eliminations: 0,
+    cellsCaptured: 0,
+    explosions: 0,
+    largestChain: 0,
+    abilitiesUsed: 0,
+    energyEarned: 0,
+    energySpent: 0,
+    abilityCounts: {},
+    portalTransfers: 0,
+    amplifierExplosions: 0,
+    powerTilesCaptured: 0,
   };
 }
 
@@ -261,31 +271,52 @@ export interface Achievement {
 
 export const ACHIEVEMENTS: Achievement[] = [
   {
-    id: "first-reaction", name: "FIRST REACTION", desc: "Win your first game.", goal: 1,
+    id: "first-reaction",
+    name: "FIRST REACTION",
+    desc: "Win your first game.",
+    goal: 1,
     progress: (p) => totalStats(p).wins,
   },
   {
-    id: "chain-master", name: "CHAIN MASTER", desc: "Create a 10+ explosion chain.", goal: 10,
+    id: "chain-master",
+    name: "CHAIN MASTER",
+    desc: "Create a 10+ explosion chain.",
+    goal: 10,
     progress: (p) => totalStats(p).largestChain,
   },
   {
-    id: "domination", name: "DOMINATION", desc: "Eliminate 3 players in one match.", goal: 3,
+    id: "domination",
+    name: "DOMINATION",
+    desc: "Eliminate 3 players in one match.",
+    goal: 3,
     progress: (p) => p.bestMatchEliminations,
   },
   {
-    id: "portal-master", name: "PORTAL MASTER", desc: "Trigger a chain through a Portal.", goal: 1,
+    id: "portal-master",
+    name: "PORTAL MASTER",
+    desc: "Trigger a chain through a Portal.",
+    goal: 1,
     progress: (p) => p.stats.arena.portalTransfers,
   },
   {
-    id: "power-user", name: "POWER USER", desc: "Use 10 abilities.", goal: 10,
+    id: "power-user",
+    name: "POWER USER",
+    desc: "Use 10 abilities.",
+    goal: 10,
     progress: (p) => p.stats.abilities.abilitiesUsed,
   },
   {
-    id: "veteran", name: "VETERAN", desc: "Play 25 matches.", goal: 25,
+    id: "veteran",
+    name: "VETERAN",
+    desc: "Play 25 matches.",
+    goal: 25,
     progress: (p) => totalStats(p).games,
   },
   {
-    id: "unstoppable", name: "UNSTOPPABLE", desc: "Reach a 5-win streak.", goal: 5,
+    id: "unstoppable",
+    name: "UNSTOPPABLE",
+    desc: "Reach a 5-win streak.",
+    goal: 5,
     progress: (p) => p.longestStreak,
   },
 ];

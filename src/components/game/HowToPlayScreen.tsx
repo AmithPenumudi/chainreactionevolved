@@ -30,7 +30,9 @@ export function HowToPlayScreen({ onBack }: Props) {
           >
             ← MENU
           </button>
-          <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">HOW TO PLAY</h1>
+          <h1 className="font-display text-xl font-black tracking-tight sm:text-3xl">
+            HOW TO PLAY
+          </h1>
         </div>
 
         <nav className="mt-6 flex flex-wrap gap-2">
@@ -92,8 +94,8 @@ function Basics() {
           <MassCard label="INTERIOR" value={4} kind="interior" />
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          On explosion, the cell empties and sends one orb to each neighbour. Any orb that lands on a
-          cell converts it to the exploding player's colour.
+          On explosion, the cell empties and sends one orb to each neighbour. Any orb that lands on
+          a cell converts it to the exploding player's colour.
         </p>
       </Section>
 
@@ -113,7 +115,14 @@ function Chains() {
   return (
     <>
       <Section title="HOW A CHAIN HAPPENS">
-        <Flow steps={["EXPLOSION", "NEIGHBOURS RECEIVE ORBS", "A NEIGHBOUR HITS CRITICAL MASS", "CHAIN REACTION"]} />
+        <Flow
+          steps={[
+            "EXPLOSION",
+            "NEIGHBOURS RECEIVE ORBS",
+            "A NEIGHBOUR HITS CRITICAL MASS",
+            "CHAIN REACTION",
+          ]}
+        />
         <p className="mt-3 text-sm text-muted-foreground">
           Every cell pushed over its limit explodes too — one placement can cascade across the whole
           board and flip many cells at once.
@@ -194,7 +203,10 @@ function Abilities() {
       <Section title="THE ABILITIES">
         <ul className="divide-y divide-white/5">
           {ABILITIES.map((a) => (
-            <li key={a.id} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+            <li
+              key={a.id}
+              className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
+            >
               <div className="min-w-0">
                 <div className="font-display text-xs tracking-[0.15em]">{a.name.toUpperCase()}</div>
                 <div className="mt-0.5 text-xs text-muted-foreground">{a.desc}</div>
@@ -216,7 +228,8 @@ function Arena() {
       <Section title="ARENA MODE">
         <p className="text-sm text-muted-foreground">
           Chain Reaction + special battlefield tiles. Arena has{" "}
-          <span className="text-foreground">no abilities and no energy</span> — only the board changes.
+          <span className="text-foreground">no abilities and no energy</span> — only the board
+          changes.
         </p>
       </Section>
 
@@ -242,8 +255,8 @@ function Arena() {
 
       <Section title="AMPLIFIER ×2">
         <p className="text-sm text-muted-foreground">
-          When the Amplifier cell itself explodes, it sends two orbs to every valid neighbour instead
-          of one.
+          When the Amplifier cell itself explodes, it sends two orbs to every valid neighbour
+          instead of one.
         </p>
         <div className="mt-3">
           <MiniBoard
@@ -413,8 +426,7 @@ function MassCard({
   kind: "corner" | "edge" | "interior";
 }) {
   const active = kind === "corner" ? 0 : kind === "edge" ? 1 : 4;
-  const arrows =
-    kind === "corner" ? [1, 3] : kind === "edge" ? [0, 2, 4] : [1, 3, 5, 7];
+  const arrows = kind === "corner" ? [1, 3] : kind === "edge" ? [0, 2, 4] : [1, 3, 5, 7];
   return (
     <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-center">
       <div className="mx-auto grid w-fit grid-cols-3 gap-[2px]">

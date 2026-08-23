@@ -1,7 +1,14 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ChallengeContext, ChallengeState, applyOutcome, challengeById, freshState,
-  isComplete, loadChallenges, rollPeriods, saveChallenges,
+  ChallengeContext,
+  ChallengeState,
+  applyOutcome,
+  challengeById,
+  freshState,
+  isComplete,
+  loadChallenges,
+  rollPeriods,
+  saveChallenges,
 } from "@/game/challenges";
 import type { MatchOutcome } from "@/game/profile";
 import { useProfile } from "@/game/profile";
@@ -25,7 +32,7 @@ export function ChallengeProvider({ children }: { children: ReactNode }) {
 
   const recordOutcome = useCallback(
     (o: MatchOutcome) => commit((s) => applyOutcome(s, o)),
-    [commit]
+    [commit],
   );
 
   const claim = useCallback(
@@ -46,7 +53,7 @@ export function ChallengeProvider({ children }: { children: ReactNode }) {
       if (granted > 0) addXp(granted);
       return granted;
     },
-    [commit, addXp]
+    [commit, addXp],
   );
 
   const resetChallenges = useCallback(() => {
@@ -57,7 +64,7 @@ export function ChallengeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ state, recordOutcome, claim, resetChallenges }),
-    [state, recordOutcome, claim, resetChallenges]
+    [state, recordOutcome, claim, resetChallenges],
   );
 
   return <ChallengeContext.Provider value={value}>{children}</ChallengeContext.Provider>;

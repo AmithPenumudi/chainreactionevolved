@@ -16,8 +16,8 @@ import {
   rollPeriods,
   weeklyKey,
   WEEKLY_POOL,
-  type MatchOutcome,
 } from "../challenges";
+import type { MatchOutcome } from "../profile";
 
 function outcome(overrides: Partial<MatchOutcome> = {}): MatchOutcome {
   return {

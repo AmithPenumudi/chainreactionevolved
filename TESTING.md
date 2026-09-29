@@ -12,14 +12,31 @@ npm test          # run once
 npm run test:watch   # re-run on file changes while developing
 ```
 
-96 tests across 6 files:
+About 300 tests across 14 files (the full run takes a few minutes, mostly the AI and
+brute-force puzzle suites):
+
+Game logic (`src/game/__tests__/`)
 - `engine.test.ts` — critical mass, placement rules, chain reactions,
   eliminations, portals, shields, amplifiers, energy cap, board shrink
-- `ai.test.ts` — legal-move guarantees per difficulty, winning-move detection
-- `profile.test.ts` — XP/leveling math, match stat accumulation, streaks
-- `puzzles.test.ts` — puzzle data integrity, medal thresholds, unlock order
-- `challenges.test.ts` — daily/weekly rotation, progress accumulation, claiming
-- `settings.test.ts` — settings persistence and speed factor
+- `engine.invariants.test.ts` — seeded fuzz: thousands of random games on every
+  board size / player count / arena map, asserting orb conservation, settled
+  boards, no orphaned modifiers, valid turn order; plus edge cases (shrink
+  eliminations, stale flags, repeat eliminations, forfeit)
+- `abilities.test.ts` — every ability incl. target validation, EMP timing,
+  Double Drop (two placements), energy accounting
+- `maps.test.ts` — arena maps (size, symmetry, portal pairing, connectivity) and
+  Chaos Grid (limits, clamping, determinism, exact tile counts, extreme seeds)
+- `ai.test.ts`, `ai.fuzz.test.ts` — legal moves per difficulty, full AI-vs-AI
+  games in every mode/map that must finish, valid ability casts, time budget
+- `puzzles.test.ts`, `puzzles.solver.test.ts` — data integrity, plus a brute-force
+  solver proving every puzzle is solvable within its move cap and gold is reachable
+- `profile.test.ts`, `challenges.test.ts`, `settings.test.ts`, `persistence.test.ts`
+  — XP/streaks, rotation, and corrupt / blocked / out-of-range localStorage
+
+Component flow (`src/components/game/__tests__/`)
+- `GameScreen.flow.test.tsx` — renders the real GameScreen under jsdom and plays
+  complete bot-vs-bot matches (classic, 4-player, Sudden Death, Abilities, Arena,
+  Blitz timer) to the result screen
 
 **When to add a test:** any time you touch `src/game/*.ts` and the change
 affects behavior (not just visuals) — new ability, new tile type, new AI
@@ -27,6 +44,18 @@ heuristic, new XP rule, etc. Add the case next to the existing ones for that
 file.
 
 ## 2. Manual regression checklist (Android app)
+
+Lessons from testing on an emulator with an *older WebView* (API 34 image ships
+Chrome 113 — real phones can be older still):
+- Don't use CSS relative colour syntax (`oklch(from …)`, needs Chrome 119): use the
+  `lighten` / `darken` / `withAlpha` helpers in `src/game/colors.ts` (`color-mix()`).
+  Symptom when broken: every orb renders black.
+- The hardware Back button is handled in `MainActivity.java` + the history stack in
+  `src/routes/index.tsx`. Check: Game → Back → Setup → Back → Home → Back exits.
+- 15-column boards must fit the phone width (no horizontal page overflow).
+- Chrome DevTools can attach to the debug build: `adb forward tcp:9222
+  localabstract:webview_devtools_remote_<pid>` then open `http://localhost:9222/json`.
+
 
 Automated tests don't touch the native shell, rendering, or touch input —
 run this by hand after any change before considering it done, and always

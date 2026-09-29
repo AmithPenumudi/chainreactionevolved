@@ -1,5 +1,5 @@
 import { PlayerConfig } from "@/game/engine";
-import { colorFor, PLAYER_SYMBOLS } from "@/game/colors";
+import { colorFor, PLAYER_SYMBOLS, lighten, withAlpha } from "@/game/colors";
 
 interface Props {
   winner: PlayerConfig;
@@ -38,7 +38,7 @@ export function VictoryScreen({
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(circle at 50% 40%, oklch(from ${color} l c h / 0.25), transparent 60%)`,
+          background: `radial-gradient(circle at 50% 40%, ${withAlpha(color, 0.25)}, transparent 60%)`,
         }}
       />
       <div className="relative w-full max-w-2xl text-center">
@@ -46,7 +46,7 @@ export function VictoryScreen({
         <div
           className="mx-auto mt-4 grid h-24 w-24 place-items-center rounded-full text-4xl"
           style={{
-            background: `radial-gradient(circle at 30% 30%, oklch(from ${color} calc(l + 0.2) c h), ${color})`,
+            background: `radial-gradient(circle at 30% 30%, ${lighten(color, 24)}, ${color})`,
             boxShadow: `0 0 40px ${color}, 0 0 90px ${color}`,
             color: "oklch(0.1 0 0)",
           }}

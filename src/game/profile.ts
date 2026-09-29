@@ -91,22 +91,85 @@ export const DEFAULT_PROFILE: PlayerProfile = {
 const STORAGE_KEY = "cr-profile-v1";
 const MAX_RECENT = 5;
 
+const MAX_STAT = 1_000_000_000;
+
+/** A finite, non-negative, bounded number — anything else falls back. */
+function safeNum(v: unknown, fallback = 0): number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.min(v, MAX_STAT) : fallback;
+}
+
+function sanitizeModeStats(raw: unknown): ModeStats {
+  const base = emptyModeStats();
+  if (!raw || typeof raw !== "object") return base;
+  const r = raw as Record<string, unknown>;
+  const out = { ...base };
+  for (const k of Object.keys(base) as (keyof ModeStats)[]) {
+    if (k === "abilityCounts") continue;
+    (out[k] as number) = safeNum(r[k]);
+  }
+  const counts = r.abilityCounts;
+  if (counts && typeof counts === "object" && !Array.isArray(counts)) {
+    for (const [id, n] of Object.entries(counts)) out.abilityCounts[id] = safeNum(n);
+  }
+  return out;
+}
+
+function sanitizeRecent(raw: unknown): MatchRecord[] {
+  if (!Array.isArray(raw)) return [];
+  const modes: StatsMode[] = ["classic", "abilities", "arena"];
+  return raw
+    .filter((m): m is MatchRecord => {
+      if (!m || typeof m !== "object") return false;
+      const r = m as Partial<MatchRecord>;
+      return (
+        typeof r.id === "string" &&
+        modes.includes(r.mode as StatsMode) &&
+        (r.result === "win" || r.result === "loss")
+      );
+    })
+    .slice(0, MAX_RECENT)
+    .map((m) => ({
+      ...m,
+      // Timestamps are legitimately far larger than any stat cap.
+      at: typeof m.at === "number" && Number.isFinite(m.at) && m.at >= 0 ? m.at : 0,
+      players: safeNum(m.players),
+      turns: safeNum(m.turns),
+      largestChain: safeNum(m.largestChain),
+      xp: safeNum(m.xp),
+      detail: typeof m.detail === "string" ? m.detail : undefined,
+    }));
+}
+
+/** Rebuilds a profile from untrusted storage: wrong types can never reach the UI or the math. */
+export function sanitizeProfile(raw: unknown): PlayerProfile {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return DEFAULT_PROFILE;
+  const p = raw as Record<string, unknown>;
+  const stats = (p.stats && typeof p.stats === "object" ? p.stats : {}) as Record<string, unknown>;
+  const name = typeof p.username === "string" ? p.username.trim().slice(0, 24) : "";
+  const avatar = typeof p.avatarId === "string" ? p.avatarId : "";
+  const streak = safeNum(p.currentStreak);
+  return {
+    username: name || DEFAULT_PROFILE.username,
+    avatarId: AVATARS.some((a) => a.id === avatar) ? avatar : DEFAULT_PROFILE.avatarId,
+    xp: safeNum(p.xp),
+    currentStreak: streak,
+    longestStreak: Math.max(safeNum(p.longestStreak), streak),
+    bestMatchEliminations: safeNum(p.bestMatchEliminations),
+    stats: {
+      classic: sanitizeModeStats(stats.classic),
+      abilities: sanitizeModeStats(stats.abilities),
+      arena: sanitizeModeStats(stats.arena),
+    },
+    recent: sanitizeRecent(p.recent),
+  };
+}
+
 export function loadProfile(): PlayerProfile {
   if (typeof window === "undefined") return DEFAULT_PROFILE;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PROFILE;
-    const p = JSON.parse(raw) as Partial<PlayerProfile>;
-    return {
-      ...DEFAULT_PROFILE,
-      ...p,
-      stats: {
-        classic: { ...emptyModeStats(), ...(p.stats?.classic ?? {}) },
-        abilities: { ...emptyModeStats(), ...(p.stats?.abilities ?? {}) },
-        arena: { ...emptyModeStats(), ...(p.stats?.arena ?? {}) },
-      },
-      recent: p.recent ?? [],
-    };
+    return sanitizeProfile(JSON.parse(raw));
   } catch {
     return DEFAULT_PROFILE;
   }
@@ -129,12 +192,13 @@ export function xpForLevel(level: number): number {
 }
 
 export function levelInfo(totalXp: number) {
-  let level = 1;
-  let remaining = Math.max(0, Math.floor(totalXp));
-  while (remaining >= xpForLevel(level)) {
-    remaining -= xpForLevel(level);
-    level += 1;
-  }
+  const xp = Number.isFinite(totalXp) ? Math.max(0, Math.floor(totalXp)) : 0;
+  // Reaching level L costs 250 * (1 + 2 + ... + (L-1)) = 125 * L * (L-1) XP in total, so the
+  // level comes from the quadratic's root instead of looping once per level.
+  let level = Math.max(1, Math.floor((1 + Math.sqrt(1 + (4 * xp) / 125)) / 2));
+  while (level > 1 && 125 * level * (level - 1) > xp) level -= 1; // guard against float error
+  while (125 * (level + 1) * level <= xp) level += 1;
+  const remaining = xp - 125 * level * (level - 1);
   const need = xpForLevel(level);
   return { level, into: remaining, need, pct: Math.min(100, (remaining / need) * 100) };
 }

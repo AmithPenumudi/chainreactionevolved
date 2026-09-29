@@ -35,9 +35,9 @@ function builder(rows: number, cols: number) {
 
 /** Standard Arena: 8×12 symmetrical layout with a small, balanced set of special tiles. */
 function buildStandard(): BoardState {
-  const { board, set, mirror, portalPair } = builder(8, 12);
-  // One central amplifier (single, balanced — sits between the two power tiles).
-  set(3, 5, "amplifier");
+  const { board, mirror, portalPair } = builder(8, 12);
+  // Central amplifiers, mirrored (an even-sized board has no single centre cell).
+  mirror(3, 5, "amplifier");
   // Two power tiles, mirrored across the board center.
   mirror(2, 3, "power");
   // Walls: four, mirrored, forming light chokepoints without isolating regions.
@@ -86,7 +86,7 @@ function buildFortress(): BoardState {
 
 /** Power Grid: 10×15, dense power tiles and amplifiers for aggressive play. */
 function buildPowerGrid(): BoardState {
-  const { board, set, mirror } = builder(10, 15);
+  const { board, mirror } = builder(10, 15);
   // Power tiles on a repeating lattice (mirrored, so counts stay even).
   for (const [r, c] of [
     [1, 2],
@@ -99,7 +99,7 @@ function buildPowerGrid(): BoardState {
     mirror(r, c, "power");
   }
   // Amplifiers punctuating the lattice.
-  set(4, 7, "amplifier");
+  mirror(4, 7, "amplifier");
   mirror(2, 9, "amplifier");
   mirror(6, 3, "amplifier");
   // A single Reactor at the heart of the grid — high risk, high payoff.
@@ -113,14 +113,14 @@ function buildPowerGrid(): BoardState {
 
 /** Chaos Grid: 10×15 party layout — every mechanic, densely packed. */
 function buildChaos(): BoardState {
-  const { board, set, mirror, portalPair } = builder(10, 15);
+  const { board, mirror, portalPair } = builder(10, 15);
   // Portals everywhere.
   portalPair(0, 0, 1);
   portalPair(2, 11, 2);
   portalPair(5, 4, 3);
   portalPair(8, 2, 4);
   // Amplifier cluster around the centre.
-  set(4, 7, "amplifier");
+  mirror(4, 7, "amplifier");
   mirror(3, 5, "amplifier");
   mirror(6, 10, "amplifier");
   mirror(1, 8, "amplifier");
@@ -150,7 +150,7 @@ export const ARENA_MAPS: ArenaMapDef[] = [
   {
     id: "standard",
     label: "Standard Arena",
-    desc: "Balanced walls, one portal pair, two power tiles and a central amplifier.",
+    desc: "Balanced walls, one portal pair, two power tiles and a pair of central amplifiers.",
     rows: 8,
     cols: 12,
     build: buildStandard,

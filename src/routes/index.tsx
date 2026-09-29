@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HomeScreen } from "@/components/game/HomeScreen";
 import { SetupScreen, MatchConfig } from "@/components/game/SetupScreen";
 import { GameScreen } from "@/components/game/GameScreen";
@@ -60,7 +60,52 @@ function Index() {
 }
 
 function Screens() {
-  const [view, setView] = useState<View>({ kind: "home" });
+  const [view, setViewState] = useState<View>({ kind: "home" });
+  // The screens the user has walked through, bottom = Home. Each history entry records its
+  // own depth, so the Android hardware Back button (and browser Back) returns to the screen
+  // that was actually open before, instead of closing the app.
+  const stack = useRef<View[]>([{ kind: "home" }]);
+
+  const setView = useCallback((next: View) => {
+    const s = stack.current;
+    const top = s.length - 1;
+    if (next.kind === s[top].kind) {
+      // Same screen (e.g. rematch, next puzzle): replace rather than stack.
+      s[top] = next;
+      window.history.replaceState({ cr: top }, "");
+      setViewState(next);
+      return;
+    }
+    // Navigating to a screen already in the stack (Home, Puzzles list…) unwinds to it.
+    for (let j = top - 1; j >= 0; j--) {
+      if (s[j].kind === next.kind) {
+        s[j] = next;
+        window.history.go(-(top - j)); // the popstate handler shows it
+        return;
+      }
+    }
+    s.push(next);
+    window.history.pushState({ cr: top + 1 }, "");
+    setViewState(next);
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => {
+      const depth = Math.min(
+        Math.max(0, Number(window.history.state?.cr ?? 0)),
+        stack.current.length - 1,
+      );
+      stack.current.length = depth + 1;
+      setViewState(stack.current[depth]);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // A new screen always starts at the top (the previous screen's scroll offset carries over).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view.kind]);
 
   if (view.kind === "home") {
     return (

@@ -179,7 +179,7 @@ export const PUZZLES: PuzzleDef[] = [
     objective: { kind: "capture", row: 2, col: 4 },
     cells: [
       { row: 2, col: 3, owner: 0, orbs: 3 }, // player interior, cap 4
-      { row: 2, col: 4, owner: 1, orbs: 2, highlighted: true }, // opponent target, edge cap 3
+      { row: 2, col: 4, owner: 1, orbs: 1, highlighted: true }, // opponent target, edge cap 3 (1+1=2 stays stable, so the capture sticks)
       { row: 0, col: 0, owner: 1, orbs: 1 }, // opponent's extra cell (survives)
     ],
   },
@@ -326,7 +326,7 @@ export const PUZZLES: PuzzleDef[] = [
       { row: 5, col: 5, tile: "portal", portalGroup: 1, owner: 0, orbs: 1 }, // portal B, player corner cap=2
       { row: 0, col: 1, owner: 0, orbs: 2 }, // player edge, cap=3
       { row: 1, col: 0, owner: 0, orbs: 2 }, // player edge, cap=3
-      { row: 4, col: 5, owner: 1, orbs: 2, highlighted: true }, // target, edge cap=3
+      { row: 4, col: 5, owner: 1, orbs: 1, highlighted: true }, // target, edge cap=3 (1+1=2 stays stable, so the capture sticks)
       { row: 5, col: 4, owner: 1, orbs: 1 }, // opponent edge
       { row: 3, col: 5, owner: 1, orbs: 1 }, // opponent — context
     ],
@@ -1006,8 +1006,23 @@ export function loadPuzzleProgress(): PuzzleProgress {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as PuzzleProgress;
-    return parsed && typeof parsed === "object" ? parsed : {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    // Keep only well-formed records so a damaged entry can never poison unlock/medal logic.
+    const out: PuzzleProgress = {};
+    for (const [id, rec] of Object.entries(parsed as Record<string, Partial<PuzzleRecord>>)) {
+      if (
+        rec &&
+        (rec.medal === "gold" || rec.medal === "silver" || rec.medal === "bronze") &&
+        typeof rec.bestMoves === "number" &&
+        Number.isFinite(rec.bestMoves) &&
+        typeof rec.xpAwarded === "number" &&
+        Number.isFinite(rec.xpAwarded)
+      ) {
+        out[id] = { medal: rec.medal, bestMoves: rec.bestMoves, xpAwarded: rec.xpAwarded };
+      }
+    }
+    return out;
   } catch {
     return {};
   }

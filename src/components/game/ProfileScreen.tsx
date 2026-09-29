@@ -1,3 +1,4 @@
+import { withAlpha } from "@/game/colors";
 import { useState } from "react";
 import {
   ACHIEVEMENTS,
@@ -58,7 +59,7 @@ export function ProfileScreen({ onBack }: Props) {
             style={{
               borderColor: avatar.colorVar,
               color: avatar.colorVar,
-              background: `oklch(from ${avatar.colorVar} l c h / 0.1)`,
+              background: `${withAlpha(avatar.colorVar, 0.1)}`,
             }}
           >
             {avatar.glyph}
@@ -137,7 +138,7 @@ export function ProfileScreen({ onBack }: Props) {
                       ? {
                           borderColor: a.colorVar,
                           color: a.colorVar,
-                          background: `oklch(from ${a.colorVar} l c h / 0.12)`,
+                          background: `${withAlpha(a.colorVar, 0.12)}`,
                         }
                       : { color: a.colorVar }
                   }

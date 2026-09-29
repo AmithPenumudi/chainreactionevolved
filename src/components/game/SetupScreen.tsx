@@ -7,7 +7,7 @@ import {
   ModeKind,
   PlayerConfig,
 } from "@/game/engine";
-import { PLAYER_COLOR_NAMES, PLAYER_SYMBOLS, colorFor } from "@/game/colors";
+import { PLAYER_COLOR_NAMES, PLAYER_SYMBOLS, colorFor, lighten } from "@/game/colors";
 import { ARENA_MAPS, ArenaMapId } from "@/game/arena-maps";
 import {
   ChaosConfig,
@@ -456,11 +456,11 @@ export function SetupScreen({ onBack, onStart }: Props) {
           <div className="mt-2 space-y-2">
             {Array.from({ length: playerCount }, (_, i) => (
               <div key={i} className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-                <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+                <div className="grid grid-cols-[auto_1fr] items-center gap-3 sm:grid-cols-[auto_1fr_auto]">
                   <div
                     className="grid h-10 w-10 shrink-0 place-items-center rounded-full font-display text-lg"
                     style={{
-                      background: `radial-gradient(circle at 30% 30%, oklch(from ${colorFor(colorIndices[i])} calc(l + 0.15) c h), ${colorFor(colorIndices[i])})`,
+                      background: `radial-gradient(circle at 30% 30%, ${lighten(colorFor(colorIndices[i]), 18)}, ${colorFor(colorIndices[i])})`,
                       boxShadow: `0 0 12px ${colorFor(colorIndices[i])}`,
                       color: "oklch(0.1 0 0)",
                     }}
@@ -476,7 +476,8 @@ export function SetupScreen({ onBack, onStart }: Props) {
                     }}
                     className="min-w-0 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:border-[oklch(0.72_0.18_235/0.6)]"
                   />
-                  <div className="flex gap-1">
+                  {/* Own row on phones so the name field keeps a usable width. */}
+                  <div className="col-span-2 flex flex-wrap justify-between gap-1 sm:col-span-1 sm:justify-start">
                     {PLAYER_COLOR_NAMES.map((_, ci) => {
                       const taken =
                         colorIndices.slice(0, playerCount).includes(ci) && colorIndices[i] !== ci;
@@ -489,7 +490,7 @@ export function SetupScreen({ onBack, onStart }: Props) {
                             next[i] = ci;
                             setColorIndices(next);
                           }}
-                          className={`h-6 w-6 rounded-full transition ${
+                          className={`h-8 w-8 rounded-full transition sm:h-6 sm:w-6 ${
                             taken ? "opacity-20" : "hover:scale-110"
                           } ${colorIndices[i] === ci ? "ring-2 ring-white" : ""}`}
                           style={{ background: colorFor(ci), boxShadow: `0 0 6px ${colorFor(ci)}` }}

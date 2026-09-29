@@ -27,3 +27,19 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+
+## Android
+
+The Android app is a Capacitor shell around a static client build. See `TESTING.md`
+for the full checklist.
+
+```
+npm run build:capacitor
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```
+
+- **Windows:** run Gradle from PowerShell (`.\gradlew.bat assembleDebug`) with `JAVA_HOME`
+  pointing at JDK 21. `gradlew.bat` does not work from Git Bash.
+- **Old devices:** the UI needs a WebView of Chrome 111+ (`oklch()` / `color-mix()`). The app
+  shows an "update Android System WebView" screen instead of a blank page when it is older.

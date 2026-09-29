@@ -13,6 +13,8 @@ import { ChallengesScreen } from "@/components/game/ChallengesScreen";
 import { PuzzlesScreen } from "@/components/game/PuzzlesScreen";
 import { PuzzleGame } from "@/components/game/PuzzleGame";
 import { PUZZLE_ORDER, type PuzzleDef } from "@/game/puzzles";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { installCrashHandlers } from "@/lib/crash-log";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,14 +50,17 @@ type View =
   | { kind: "game"; config: MatchConfig; nonce: number };
 
 function Index() {
+  useEffect(() => installCrashHandlers(), []);
   return (
-    <SettingsProvider>
-      <ProfileProvider>
-        <ChallengeProvider>
-          <Screens />
-        </ChallengeProvider>
-      </ProfileProvider>
-    </SettingsProvider>
+    <ErrorBoundary>
+      <SettingsProvider>
+        <ProfileProvider>
+          <ChallengeProvider>
+            <Screens />
+          </ChallengeProvider>
+        </ProfileProvider>
+      </SettingsProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -118,6 +118,11 @@ describe("puzzles — solvability (brute force)", () => {
     expect(bad, JSON.stringify(bad)).toEqual([]);
   });
 
+  it("gold equals the true optimum: no puzzle has an unintended shortcut", () => {
+    const loose = results.filter((r) => r.min !== null && r.min < r.gold);
+    expect(loose, JSON.stringify(loose)).toEqual([]);
+  });
+
   it("reports puzzles the solver could not fully search (informational)", () => {
     const unverified = results.filter((r) => r.unverified).map((r) => r.id);
     console.info(`brute-force inconclusive for: ${unverified.join(", ") || "none"}`);

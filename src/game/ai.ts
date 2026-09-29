@@ -1,5 +1,6 @@
 import {
   applyMove,
+  applyShrink,
   canPlace,
   commitMove,
   effectiveCriticalMass,
@@ -63,6 +64,34 @@ function isThreatenedBy(b: BoardState, r: number, c: number, me: PlayerId): bool
 }
 
 /**
+ * How close the next Sudden Death shrink is, seen from the position after `state`'s move:
+ * 1 = it fires right after this move, fading to 0 when it is 4+ moves away (or disabled).
+ */
+export function shrinkUrgency(state: GameState): number {
+  const { enableShrink, shrinkIntervalRounds: every } = state.rules;
+  if (!enableShrink || every <= 0) return 0;
+  if (state.board.rows <= 4 || state.board.cols <= 4) return 0; // cannot shrink any further
+  const away = (every - ((state.turn + 1) % every)) % every; // 0 = shrinks right after this move
+  return away === 0 ? 1 : Math.max(0, 1 - away / 4);
+}
+
+/**
+ * commitMove plus the Sudden Death shrink that follows every Nth turn — the same sequence the
+ * game screen plays — so lookahead sees the board the opponent will really face.
+ */
+function commitWithShrink(state: GameState, res: MoveResult): GameState {
+  const next = commitMove(state, res);
+  const { enableShrink, shrinkIntervalRounds: every } = next.rules;
+  if (next.winner === null && !next.draw && enableShrink && every > 0 && next.turn % every === 0) {
+    return applyShrink(next) ?? next;
+  }
+  return next;
+}
+
+const onRing = (b: BoardState, r: number, c: number) =>
+  r === 0 || c === 0 || r === b.rows - 1 || c === b.cols - 1;
+
+/**
  * Score a completed MoveResult from the perspective of `me`.
  * Higher is better.
  */
@@ -71,6 +100,21 @@ function scoreResult(state: GameState, res: MoveResult, me: PlayerId): number {
   if (res.winner !== null && res.winner !== me) return -1_000_000;
 
   const b = res.boardAfter;
+  const urgency = shrinkUrgency(state);
+  if (urgency === 1) {
+    // The outer ring is deleted right after this move: only interior cells survive.
+    let mine = 0;
+    let theirs = 0;
+    for (let r = 1; r < b.rows - 1; r++) {
+      for (let c = 1; c < b.cols - 1; c++) {
+        const o = b.cells[r * b.cols + c].owner;
+        if (o === me) mine++;
+        else if (o !== null) theirs++;
+      }
+    }
+    if (mine === 0) return -900_000; // wiped out by the shrink
+    if (theirs === 0) return 900_000; // every opponent wiped out by the shrink
+  }
   let myCells = 0;
   let myOrbs = 0;
   let oppCells = 0;
@@ -104,9 +148,12 @@ function scoreResult(state: GameState, res: MoveResult, me: PlayerId): number {
           if (!threatened) myLoadedSafe++;
         }
 
-        // Positional preference: corners and edges are stable
-        if (cm === 2) positional += 4;
-        else if (cm === 3) positional += 1.8;
+        // Positional preference: corners and edges are stable — but they are exactly what the
+        // Sudden Death shrink removes, so that bonus fades out (and turns into a penalty).
+        const edgeValue = 1 - urgency;
+        if (cm === 2) positional += 4 * edgeValue;
+        else if (cm === 3) positional += 1.8 * edgeValue;
+        if (urgency > 0 && onRing(b, r, c)) positional -= (6 + cell.orbs * 2) * urgency;
 
         // Special Tile Awareness
         if (cell.tile === "power") {
@@ -212,7 +259,7 @@ function alphaBetaSearch(
     const candidates = scoredMoves.slice(0, 6);
     let maxEval = -Infinity;
     for (const cand of candidates) {
-      const nextState = commitMove(state, cand.res);
+      const nextState = commitWithShrink(state, cand.res);
       const nextPlayerIsMe = nextState.players[nextState.currentPlayerIdx].id === me;
       const evaluation = alphaBetaSearch(nextState, depth - 1, alpha, beta, nextPlayerIsMe, me);
       maxEval = Math.max(maxEval, evaluation);
@@ -225,7 +272,7 @@ function alphaBetaSearch(
     const candidates = scoredMoves.slice(0, 6);
     let minEval = Infinity;
     for (const cand of candidates) {
-      const nextState = commitMove(state, cand.res);
+      const nextState = commitWithShrink(state, cand.res);
       const nextPlayerIsMe = nextState.players[nextState.currentPlayerIdx].id === me;
       const evaluation = alphaBetaSearch(nextState, depth - 1, alpha, beta, nextPlayerIsMe, me);
       minEval = Math.min(minEval, evaluation);
@@ -250,7 +297,7 @@ function chooseHard(state: GameState, me: PlayerId): Move {
       winningMove = m;
       break;
     }
-    const afterState = commitMove(state, res);
+    const afterState = commitWithShrink(state, res);
     // 2-ply search
     const score = alphaBetaSearch(afterState, 1, -Infinity, Infinity, false, me);
     scored.push({ move: m, score });
@@ -332,8 +379,11 @@ function chooseEasy(state: GameState, me: PlayerId): Move {
     let s = 0;
     if (cell.orbs + 1 >= cm) s += 5; // will trigger a chain
     if (!isThreatenedBy(state.board, m.r, m.c, me)) s += 2;
-    if (cm === 2) s += 2;
-    else if (cm === 3) s += 1;
+    // Edges are safe — until Sudden Death is about to delete the outer ring.
+    const urgency = shrinkUrgency(state);
+    if (cm === 2) s += 2 * (1 - urgency);
+    else if (cm === 3) s += 1 * (1 - urgency);
+    if (urgency > 0 && onRing(state.board, m.r, m.c)) s -= 8 * urgency;
     s += Math.random();
     return { m, s };
   });
@@ -400,7 +450,7 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
         if (res) {
           const energyDelta = res.energyDelta ?? -ab.cost;
           const energyAfter = Math.min(100, Math.max(0, currentEnergy + energyDelta));
-          const afterState = commitMove(state, res);
+          const afterState = commitWithShrink(state, res);
           // Evaluate opponent's reply to this ability
           const oppReplyScore = worstReplyForMe(afterState, me, 10);
           const score = oppReplyScore + energyAfter * 0.3 + 12; // Extra bonus for Double Drop turn tempo
@@ -419,7 +469,7 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
               if (res) {
                 const energyDelta = res.energyDelta ?? -ab.cost;
                 const energyAfter = Math.min(100, Math.max(0, currentEnergy + energyDelta));
-                const afterState = commitMove(state, res);
+                const afterState = commitWithShrink(state, res);
                 const oppReplyScore = worstReplyForMe(afterState, me, 10);
                 const score = oppReplyScore + energyAfter * 0.3;
                 if (score > bestActionScore) {
@@ -456,7 +506,7 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
                 if (res) {
                   const energyDelta = res.energyDelta ?? -ab.cost;
                   const energyAfter = Math.min(100, Math.max(0, currentEnergy + energyDelta));
-                  const afterState = commitMove(state, res);
+                  const afterState = commitWithShrink(state, res);
                   const oppReplyScore = worstReplyForMe(afterState, me, 10);
                   const score = oppReplyScore + energyAfter * 0.3;
                   if (score > bestActionScore) {

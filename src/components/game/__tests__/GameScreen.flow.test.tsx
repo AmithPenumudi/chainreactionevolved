@@ -63,6 +63,12 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 
+/** Fails with the actual console.error text, which makes a React warning easy to diagnose. */
+function expectNoErrors() {
+  const text = errors.map((e) => (e as unknown[]).map((x) => String(x).slice(0, 400)).join(" | "));
+  expect(text).toEqual([]);
+}
+
 async function mount(cfg: MatchConfig, onExit = vi.fn(), onRematch = vi.fn()) {
   await act(async () => {
     root.render(
@@ -96,7 +102,7 @@ describe("GameScreen — full automated matches", () => {
     expect(host.textContent).toContain("CLASSIC");
     expect(host.textContent).toContain("Bot 1");
     expect(host.textContent).toContain("Bot 2");
-    expect(errors).toEqual([]);
+    expectNoErrors();
   });
 
   it("classic 2-bot game plays through to a victory screen without errors", async () => {
@@ -104,13 +110,13 @@ describe("GameScreen — full automated matches", () => {
     const result = await playToEnd();
     expect(result).toBe("victory");
     expect(host.textContent).toContain("MAIN MENU");
-    expect(errors).toEqual([]);
+    expectNoErrors();
   }, 120_000);
 
   it("4-bot game finishes and the eliminated players are handled", async () => {
     await mount(config({ players: aiPlayers(4), rows: 6, cols: 9 }));
     expect(await playToEnd()).toBe("victory");
-    expect(errors).toEqual([]);
+    expectNoErrors();
   }, 180_000);
 
   it("Sudden Death: the first shrink (turn 8) resolves cleanly and the match ends without errors", async () => {
@@ -121,14 +127,14 @@ describe("GameScreen — full automated matches", () => {
     // Bots love edge cells, which the shrink deletes, so this often ends right at the first
     // shrink — either way it must end in a proper result screen, never a stuck board.
     expect(["victory", "draw"]).toContain(result);
-    expect(errors).toEqual([]);
+    expectNoErrors();
   }, 180_000);
 
   it("Abilities mode: AI matches run to completion without errors", async () => {
     await mount(config({ modeKind: "abilities" }));
     expect(host.textContent).toContain("ENERGY");
     expect(await playToEnd()).toBe("victory");
-    expect(errors).toEqual([]);
+    expectNoErrors();
   }, 180_000);
 
   it("Arena (Portal map): AI matches run without errors", async () => {
@@ -140,7 +146,7 @@ describe("GameScreen — full automated matches", () => {
       });
       if ((host.textContent ?? "").includes("VICTORY")) break;
     }
-    expect(errors).toEqual([]);
+    expectNoErrors();
   }, 180_000);
 
   it("Blitz: an idle human is forfeited by the turn timer instead of freezing the game", async () => {
@@ -157,7 +163,7 @@ describe("GameScreen — full automated matches", () => {
       });
     }
     expect(host.textContent).toContain("Human");
-    expect(errors).toEqual([]);
+    expectNoErrors();
     // The bot must have had a turn (its move raises the orb count above zero).
     expect(/[1-9]\d* orbs/.test(host.textContent ?? ""), `turn was ${turnBefore}`).toBe(true);
   }, 60_000);

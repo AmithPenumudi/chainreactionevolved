@@ -14,6 +14,8 @@ const rootTsconfig = fileURLToPath(new URL("./tsconfig.json", import.meta.url));
 export default defineConfig({
   root: "capacitor-src",
   plugins: [tsConfigPaths({ projects: [rootTsconfig] }), tailwindcss(), viteReact()],
+  // The AI search runs in a module Web Worker (see src/game/ai-client.ts).
+  worker: { format: "es" },
   build: {
     outDir: "../dist-capacitor",
     emptyOutDir: true,

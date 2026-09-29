@@ -459,6 +459,63 @@ export const PUZZLES: PuzzleDef[] = [
     ],
   },
 
+  // Solver-verified: minimum 2 moves, 1 winning first move(s).
+  {
+    id: "m-triangle",
+    name: "TRIANGLE",
+    brief: "Two opponents, several loaded cells of yours. Clear both — the order matters.",
+    difficulty: "medium",
+    modeKind: "classic",
+    rows: 6,
+    cols: 5,
+    playerColors: [0, 1, 2],
+    maxMoves: 3,
+    medals: { gold: 2, silver: 2, bronze: 3 },
+    xp: 400,
+    hint: "Look at which opponent each loaded cell touches, and what its blast would feed.",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 5, col: 2, owner: 0, orbs: 1 },
+      { row: 0, col: 2, owner: 0, orbs: 2 },
+      { row: 2, col: 1, owner: 0, orbs: 2 },
+      { row: 1, col: 3, owner: 0, orbs: 2 },
+      { row: 3, col: 0, owner: 0, orbs: 1 },
+      { row: 0, col: 3, owner: 1, orbs: 1 },
+      { row: 1, col: 1, owner: 1, orbs: 2 },
+      { row: 1, col: 0, owner: 2, orbs: 2 },
+      { row: 1, col: 2, owner: 2, orbs: 3 },
+    ],
+  },
+
+  // Solver-verified: minimum 2 moves, 1 winning first move(s).
+  {
+    id: "m-walled-in",
+    name: "WALLED IN",
+    brief: "Walls block explosions. Plan where each blast can actually go.",
+    difficulty: "medium",
+    modeKind: "arena",
+    rows: 5,
+    cols: 6,
+    playerColors: [0, 1, 2],
+    maxMoves: 3,
+    medals: { gold: 2, silver: 2, bronze: 3 },
+    xp: 420,
+    hint: "Explosions cannot cross a wall, so trace where each orb really ends up.",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 3, col: 4, tile: "wall" },
+      { row: 1, col: 4, tile: "wall" },
+      { row: 1, col: 3, owner: 0, orbs: 2 },
+      { row: 3, col: 2, owner: 0, orbs: 3 },
+      { row: 2, col: 3, owner: 0, orbs: 3 },
+      { row: 1, col: 1, owner: 0, orbs: 2 },
+      { row: 0, col: 1, owner: 1, orbs: 2 },
+      { row: 2, col: 1, owner: 1, orbs: 2 },
+      { row: 1, col: 0, owner: 2, orbs: 2 },
+      { row: 0, col: 0, owner: 2, orbs: 1 },
+    ],
+  },
+
   /* ----------------------------- HARD ------------------------------ */
 
   // 13 — CROSSROADS (2 moves, eliminate-all, classic 6×6)
@@ -683,6 +740,60 @@ export const PUZZLES: PuzzleDef[] = [
     ],
   },
 
+  // Solver-verified: minimum 3 moves, 1 winning first move(s).
+  {
+    id: "h-slow-burn",
+    name: "SLOW BURN",
+    brief: "Exactly one opening move works, and the payoff comes a couple of moves later.",
+    difficulty: "hard",
+    modeKind: "classic",
+    rows: 6,
+    cols: 6,
+    playerColors: [0, 1],
+    maxMoves: 4,
+    medals: { gold: 3, silver: 3, bronze: 4 },
+    xp: 600,
+    hint: "Only one opening move works: check every loaded cell before you commit.",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 1, col: 5, owner: 0, orbs: 2 },
+      { row: 4, col: 4, owner: 0, orbs: 3 },
+      { row: 2, col: 4, owner: 0, orbs: 3 },
+      { row: 3, col: 5, owner: 0, orbs: 1 },
+      { row: 0, col: 5, owner: 0, orbs: 1 },
+      { row: 2, col: 1, owner: 1, orbs: 3 },
+      { row: 2, col: 2, owner: 1, orbs: 2 },
+    ],
+  },
+
+  // Solver-verified: minimum 3 moves, 1 winning first move(s).
+  {
+    id: "h-broken-line",
+    name: "BROKEN LINE",
+    brief: "Two enemy groups, walls in the way, and exactly one opening move that works.",
+    difficulty: "hard",
+    modeKind: "arena",
+    rows: 6,
+    cols: 5,
+    playerColors: [0, 1, 2],
+    maxMoves: 4,
+    medals: { gold: 3, silver: 3, bronze: 4 },
+    xp: 650,
+    hint: "Try each of your loaded cells in turn and watch where its orbs actually land.",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 0, col: 4, tile: "wall" },
+      { row: 3, col: 2, tile: "wall" },
+      { row: 4, col: 3, owner: 0, orbs: 3 },
+      { row: 0, col: 2, owner: 0, orbs: 1 },
+      { row: 1, col: 4, owner: 0, orbs: 1 },
+      { row: 2, col: 0, owner: 1, orbs: 2 },
+      { row: 2, col: 2, owner: 1, orbs: 2 },
+      { row: 1, col: 0, owner: 2, orbs: 2 },
+      { row: 2, col: 1, owner: 2, orbs: 2 },
+    ],
+  },
+
   /* ---------------------------- EXPERT ---------------------------- */
 
   // 19 — PERIMETER (single move, chain ≥18, classic 7×7)
@@ -780,7 +891,7 @@ export const PUZZLES: PuzzleDef[] = [
   // Two opponents on opposite sides. Opp1 (bottom-right) is only reachable via portal.
   // Opp2 (top-right) is attacked directly. Either move can go first.
   // Move A: fire (0,2) → into portal A at (0,3) → emerges at portal B (6,3) [orbs=2, cap=3, fires] →
-  //   cascades through opp1 (6,4)→(6,5)→(6,6). Move B: fire (0,4) → (0,5)→(0,6) cascade.
+  //   cascades through opp1 (6,4)→(6,5)→(6,6). Move B: fire (1,5) → (0,5)→(0,6) cascade.
   {
     id: "x-split-strike",
     name: "SPLIT STRIKE",
@@ -803,7 +914,9 @@ export const PUZZLES: PuzzleDef[] = [
       { row: 6, col: 3, tile: "portal", portalGroup: 1, owner: 0, orbs: 2 },
       // Player attack cells
       { row: 0, col: 2, owner: 0, orbs: 2 }, // fires right into portal A → clears opp1
-      { row: 0, col: 4, owner: 0, orbs: 2 }, // fires right into opp2 corner chain
+      // Sits below opp2 (not beside portal A), so firing it cannot also feed the portal:
+      // that would clear both opponents in one move.
+      { row: 1, col: 5, owner: 0, orbs: 3 }, // interior cap=4, fires up into opp2's edge cell
       // Opponent 1 — bottom-right (only reachable via portal)
       { row: 6, col: 4, owner: 1, orbs: 2 }, // edge, cap=3
       { row: 6, col: 5, owner: 1, orbs: 2 }, // edge, cap=3
@@ -940,6 +1053,67 @@ export const PUZZLES: PuzzleDef[] = [
       { row: 6, col: 6, owner: 2, orbs: 1 },
     ],
   },
+  // Solver-verified: minimum 4 moves, 2 winning first move(s).
+  {
+    id: "x-tight-quarters",
+    name: "TIGHT QUARTERS",
+    brief: "A cramped board, two opponents, and a four-move solution. Every orb counts.",
+    difficulty: "expert",
+    modeKind: "arena",
+    rows: 5,
+    cols: 5,
+    playerColors: [0, 1, 2],
+    maxMoves: 5,
+    medals: { gold: 4, silver: 4, bronze: 5 },
+    xp: 1200,
+    hint: "Count backwards: what must already be true before the last move can finish the job?",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 3, col: 2, tile: "wall" },
+      { row: 1, col: 2, tile: "wall" },
+      { row: 1, col: 3, owner: 0, orbs: 1 },
+      { row: 4, col: 3, owner: 0, orbs: 2 },
+      { row: 3, col: 4, owner: 0, orbs: 1 },
+      { row: 2, col: 1, owner: 0, orbs: 2 },
+      { row: 3, col: 1, owner: 1, orbs: 1 },
+      { row: 0, col: 3, owner: 1, orbs: 1 },
+      { row: 0, col: 1, owner: 1, orbs: 2 },
+      { row: 0, col: 0, owner: 2, orbs: 1 },
+      { row: 4, col: 1, owner: 2, orbs: 1 },
+      { row: 1, col: 1, owner: 2, orbs: 2 },
+    ],
+  },
+
+  // Solver-verified: minimum 4 moves, 2 winning first move(s).
+  {
+    id: "x-crosswind",
+    name: "CROSSWIND",
+    brief: "Three players cut across each other, with a single wall on the board.",
+    difficulty: "expert",
+    modeKind: "arena",
+    rows: 5,
+    cols: 6,
+    playerColors: [0, 1, 2],
+    maxMoves: 5,
+    medals: { gold: 4, silver: 4, bronze: 5 },
+    xp: 1250,
+    hint: "A wall shields the cells behind it — use it to keep your own blasts from feeding a neighbour.",
+    objective: { kind: "eliminate-all" },
+    cells: [
+      { row: 2, col: 4, tile: "wall" },
+      { row: 1, col: 5, owner: 0, orbs: 2 },
+      { row: 3, col: 3, owner: 0, orbs: 3 },
+      { row: 3, col: 4, owner: 0, orbs: 2 },
+      { row: 2, col: 5, owner: 0, orbs: 1 },
+      { row: 2, col: 1, owner: 0, orbs: 3 },
+      { row: 0, col: 0, owner: 1, orbs: 1 },
+      { row: 1, col: 2, owner: 1, orbs: 2 },
+      { row: 2, col: 2, owner: 1, orbs: 3 },
+      { row: 0, col: 2, owner: 2, orbs: 2 },
+      { row: 0, col: 3, owner: 2, orbs: 2 },
+      { row: 3, col: 2, owner: 2, orbs: 1 },
+    ],
+  },
 ];
 
 export function puzzleById(id: string): PuzzleDef | undefined {
@@ -1060,9 +1234,11 @@ export function applySolve(
   return { progress: next, xpGained };
 }
 
-/** A puzzle is unlocked when the previous puzzle in order has been solved. */
+/** A puzzle is unlocked when the previous puzzle in order — or any later one — has been solved. */
 export function isUnlocked(progress: PuzzleProgress, def: PuzzleDef): boolean {
   const i = PUZZLE_ORDER.findIndex((p) => p.id === def.id);
-  if (i <= 0) return true;
-  return !!progress[PUZZLE_ORDER[i - 1].id];
+  if (i <= 0 || progress[def.id]) return true; // solved puzzles can always be replayed
+  if (progress[PUZZLE_ORDER[i - 1].id]) return true;
+  // Puzzles added later in the list must never lock players who already got past this point.
+  return PUZZLE_ORDER.slice(i + 1).some((p) => progress[p.id]);
 }

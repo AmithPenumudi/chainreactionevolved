@@ -1,0 +1,10 @@
+Inter (variable), latin and latin-ext subsets — inter-latin.woff2, inter-latin-ext.woff2
+
+Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
+
+These font files are licensed under the SIL Open Font License, Version 1.1.
+The license text is available at https://openfontlicense.org and in the Inter repository
+(https://github.com/rsms/inter/blob/master/LICENSE.txt).
+
+Obtained from Google Fonts (https://fonts.google.com/specimen/Inter) so the app no longer
+depends on fonts.googleapis.com / fonts.gstatic.com at runtime (it works fully offline).

@@ -16,6 +16,7 @@ import { CellView } from "./CellView";
 import { colorFor } from "@/game/colors";
 import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
+import { haptic } from "@/game/haptics";
 import { useProfile } from "@/game/profile";
 import {
   applySolve,
@@ -123,6 +124,7 @@ export function PuzzleGame({ puzzle, onBack, onNext }: Props) {
     savePuzzleProgress(next);
     if (xpGained > 0) addXp(xpGained);
     playSfx(settings, "explode");
+    haptic(settings, "win");
     setStatus({ kind: "solved", medal, moves: movesUsed, xp: xpGained });
   };
 
@@ -133,6 +135,7 @@ export function PuzzleGame({ puzzle, onBack, onNext }: Props) {
     busy.current = true;
     setAnimating(true);
     playSfx(settings, "place");
+    haptic(settings, "place");
 
     // Placement snapshot before any explosions.
     const placed = cloneBoard(res.boardBefore);
@@ -144,6 +147,7 @@ export function PuzzleGame({ puzzle, onBack, onNext }: Props) {
 
     for (const step of res.steps) {
       playSfx(settings, "explode");
+      haptic(settings, "explode");
       setDisplay(step.boardAfter);
       await sleep(Math.round(260 * sf));
     }

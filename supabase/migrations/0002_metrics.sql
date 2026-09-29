@@ -36,6 +36,10 @@ create policy "insert own activity" on public.player_activity for insert
 create policy "update own activity" on public.player_activity for update
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- Explicit grants, since "Automatically expose new tables" is off. Note the missing SELECT:
+-- the game only ever writes here, so no client can read activity back — not even its own.
+grant insert, update on public.player_activity to authenticated;
+
 
 -- ---------------------------------------------------------------- internal dashboard
 --
@@ -44,6 +48,12 @@ create policy "update own activity" on public.player_activity for update
 -- SQL editor and by the service_role only. Do not move them into `public`.
 
 create schema if not exists metrics;
+
+-- Only the service_role may read these, and that key never leaves your machine: the dashboard
+-- is generated locally by `npm run dashboard`. Neither `anon` nor `authenticated` is granted
+-- anything here, so the views are unreachable from the game even if its key leaks.
+grant usage on schema metrics to service_role;
+alter default privileges in schema metrics grant select on tables to service_role;
 
 -- Headline numbers. Active = had any foreground time that day.
 create or replace view metrics.overview as
@@ -106,3 +116,23 @@ select
   count(*) filter (where (select count(*) from jsonb_object_keys(puzzles)) = 0)
                                                                              as never_solved_a_puzzle
 from public.player_data;
+
+-- Which modes people actually play, summed from the synced profile stats.
+create or replace view metrics.mode_split as
+select
+  mode,
+  sum(games)::bigint as games,
+  sum(wins)::bigint  as wins
+from public.player_data,
+  lateral (values
+    ('classic',   coalesce((profile #>> '{stats,classic,games}')::int, 0),
+                  coalesce((profile #>> '{stats,classic,wins}')::int, 0)),
+    ('abilities', coalesce((profile #>> '{stats,abilities,games}')::int, 0),
+                  coalesce((profile #>> '{stats,abilities,wins}')::int, 0)),
+    ('arena',     coalesce((profile #>> '{stats,arena,games}')::int, 0),
+                  coalesce((profile #>> '{stats,arena,wins}')::int, 0))
+  ) as t(mode, games, wins)
+group by mode;
+
+-- Explicit, in case default privileges did not apply to the views above.
+grant select on all tables in schema metrics to service_role;

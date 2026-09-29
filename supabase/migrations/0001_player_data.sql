@@ -37,6 +37,16 @@ create policy "update own row" on public.player_data for update
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 -- No delete policy: a player removes their data by deleting the account, which cascades.
 
+-- Privileges are granted explicitly because the project has "Automatically expose new tables"
+-- turned off. RLS decides which ROWS a caller sees; these grants decide whether the table is
+-- reachable at all, and both must allow it.
+--
+-- Nothing is granted to `anon`: every request comes from a signed-in user, and a Supabase
+-- anonymous user still carries the `authenticated` role. So an unauthenticated caller holding
+-- the public anon key can reach nothing here.
+grant usage on schema public to authenticated;
+grant select, insert, update on public.player_data to authenticated;
+
 -- Keep updated_at and version honest regardless of what the client sends.
 create or replace function public.touch_player_data()
 returns trigger

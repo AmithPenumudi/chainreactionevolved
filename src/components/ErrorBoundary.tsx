@@ -23,12 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    recordCrash(
-      Object.assign(new Error(error.message), {
-        stack: `${error.stack ?? ""}\ncomponent stack:${info.componentStack ?? ""}`,
-      }),
-      "boundary",
-    );
+    recordCrash(error, "boundary", info.componentStack ?? undefined);
   }
 
   private reset = () => {

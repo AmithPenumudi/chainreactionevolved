@@ -6,6 +6,8 @@ export interface CrashEntry {
   at: number;
   message: string;
   stack?: string;
+  /** React's component tree at the point of failure (boundary crashes only). */
+  componentStack?: string;
   source: "error" | "unhandledrejection" | "boundary";
 }
 
@@ -45,10 +47,21 @@ export function getCrashLog(): CrashEntry[] {
   }
 }
 
-/** Appends an entry, keeping only the newest `MAX_CRASHES`. Never throws. */
-export function recordCrash(reason: unknown, source: CrashEntry["source"] = "error"): void {
+/**
+ * Appends an entry, keeping only the newest `MAX_CRASHES`. Never throws.
+ *
+ * `componentStack` gets its own length budget rather than being glued onto `stack`: JS stacks
+ * are routinely long (longer still when the build path is deep), and truncating the pair as one
+ * string would silently drop the component tree — the more useful half for a render error.
+ */
+export function recordCrash(
+  reason: unknown,
+  source: CrashEntry["source"] = "error",
+  componentStack?: string,
+): void {
   try {
     const entry: CrashEntry = { at: Date.now(), source, ...describe(reason) };
+    if (componentStack) entry.componentStack = componentStack.slice(0, MAX_TEXT);
     const next = [...getCrashLog(), entry].slice(-MAX_CRASHES);
     window.localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
@@ -92,6 +105,7 @@ export function formatDebugInfo(): string {
   for (const c of crashes) {
     lines.push("", `[${new Date(c.at).toISOString()}] (${c.source}) ${c.message}`);
     if (c.stack) lines.push(c.stack);
+    if (c.componentStack) lines.push(`component stack:${c.componentStack}`);
   }
   return lines.join("\n");
 }

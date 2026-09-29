@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ErrorBoundary } from "../ErrorBoundary";
-import { getCrashLog } from "@/lib/crash-log";
+import { getCrashLog, recordCrash } from "@/lib/crash-log";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -59,7 +59,20 @@ describe("ErrorBoundary", () => {
     expect(log).toHaveLength(1);
     expect(log[0].source).toBe("boundary");
     expect(log[0].message).toBe("render exploded");
-    expect(log[0].stack).toContain("component stack");
+    expect(log[0].stack).toContain("render exploded");
+    // Names the failing component, which is the point of keeping a component stack at all.
+    expect(log[0].componentStack).toContain("Bomb");
+  });
+
+  it("keeps the component stack even when the JS stack is long enough to be truncated", () => {
+    // Regression: the two stacks were concatenated and then truncated as one string, so a long
+    // JS stack (deep CI build paths were enough) silently dropped the component tree.
+    const error = new Error("deep");
+    error.stack = `Error: deep\n${"    at someVeryDeeplyNestedFrame (/a/very/long/build/path/node_modules/react-dom/cjs/react-dom-client.development.js:12345:67)\n".repeat(40)}`;
+    recordCrash(error, "boundary", "\n    at Bomb\n    at ErrorBoundary");
+    const [entry] = getCrashLog();
+    expect(entry.componentStack).toContain("Bomb");
+    expect(entry.stack!.length).toBeLessThanOrEqual(1500);
   });
 
   it("TRY AGAIN remounts the children (recovers once the cause is gone)", async () => {

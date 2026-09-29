@@ -65,8 +65,12 @@ afterEach(async () => {
 
 /** Fails with the actual console.error text, which makes a React warning easy to diagnose. */
 function expectNoErrors() {
-  const text = errors.map((e) => (e as unknown[]).map((x) => String(x).slice(0, 400)).join(" | "));
-  expect(text).toEqual([]);
+  // Compared as one string: an array diff gets truncated to "[ …(2) ]", which hides the very
+  // thing the assertion exists to show.
+  const text = errors
+    .map((e) => (e as unknown[]).map((x) => String(x).slice(0, 600)).join(" | "))
+    .join("\n---\n");
+  expect(text).toBe("");
 }
 
 async function mount(cfg: MatchConfig, onExit = vi.fn(), onRematch = vi.fn()) {

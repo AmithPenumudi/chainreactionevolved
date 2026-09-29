@@ -770,7 +770,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               >
                 {Array.from({ length: state.board.rows }).map((_, r) =>
                   Array.from({ length: state.board.cols }).map((_, c) => {
-                    const cell = anim.displayBoard.cells[r * state.board.cols + c];
+                    // Indexed with the display board's OWN width: for one frame after a shrink
+                    // it is still the larger pre-shrink board, and mixing the two widths reads
+                    // the wrong cells.
+                    const cell = anim.displayBoard.cells[r * anim.displayBoard.cols + c];
                     const highlightKind = highlight.get(`${r}:${c}`) ?? null;
                     let canP: boolean;
                     if (selectedAbility) {
@@ -830,7 +833,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
               {anim.showChainBanner && (
                 <div
-                  key={anim.showChainBanner.key}
+                  // Namespaced: the two banners are siblings in one JSX child list, and their
+                  // counters are independent — bare numbers collide whenever both happen to
+                  // reach the same value with both banners on screen.
+                  key={`chain-${anim.showChainBanner.key}`}
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 >
                   <div className="combo-banner text-center">
@@ -849,7 +855,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
               {anim.showShrinkBanner && (
                 <div
-                  key={anim.showShrinkBanner.key}
+                  key={`shrink-${anim.showShrinkBanner.key}`}
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 >
                   <div className="shrink-banner text-center">

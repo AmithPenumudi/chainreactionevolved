@@ -1,3 +1,4 @@
+import { lighten, darken } from "@/game/colors";
 import { CSSProperties } from "react";
 
 interface OrbProps {
@@ -31,20 +32,20 @@ export function Orb({ color, size, style }: OrbProps) {
       <defs>
         {/* Body shading — soft, natural sphere. */}
         <radialGradient id={`${id}-body`} cx="35%" cy="32%" r="75%">
-          <stop offset="0%" stopColor={`oklch(from ${color} calc(l + 0.14) c h)`} />
-          <stop offset="45%" stopColor={color} />
-          <stop offset="100%" stopColor={`oklch(from ${color} calc(l - 0.16) c h)`} />
+          <stop offset="0%" style={{ stopColor: lighten(color, 17) }} />
+          <stop offset="45%" style={{ stopColor: color }} />
+          <stop offset="100%" style={{ stopColor: darken(color, 28) }} />
         </radialGradient>
         {/* Very soft top highlight for depth. */}
         <radialGradient id={`${id}-hi`} cx="35%" cy="28%" r="30%">
-          <stop offset="0%" stopColor="oklch(1 0 0 / 0.55)" />
-          <stop offset="60%" stopColor="oklch(1 0 0 / 0.10)" />
-          <stop offset="100%" stopColor="oklch(1 0 0 / 0)" />
+          <stop offset="0%" style={{ stopColor: "white", stopOpacity: 0.55 }} />
+          <stop offset="60%" style={{ stopColor: "white", stopOpacity: 0.1 }} />
+          <stop offset="100%" style={{ stopColor: "white", stopOpacity: 0 }} />
         </radialGradient>
         {/* Subtle bottom terminator to sit the sphere in space. */}
         <radialGradient id={`${id}-shade`} cx="55%" cy="90%" r="55%">
-          <stop offset="0%" stopColor={`oklch(from ${color} calc(l - 0.22) c h / 0.55)`} />
-          <stop offset="100%" stopColor={`oklch(from ${color} calc(l - 0.22) c h / 0)`} />
+          <stop offset="0%" style={{ stopColor: darken(color, 38), stopOpacity: 0.55 }} />
+          <stop offset="100%" style={{ stopColor: darken(color, 38), stopOpacity: 0 }} />
         </radialGradient>
       </defs>
 

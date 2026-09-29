@@ -8,7 +8,9 @@ export const getRouter = () => {
   const router = createRouter({
     routeTree,
     context: { queryClient },
-    scrollRestoration: true,
+    // Screens are React state inside one route, so per-location scroll restoration only ever
+    // re-applies the previous screen's offset (see Screens in routes/index.tsx).
+    scrollRestoration: false,
     defaultPreloadStaleTime: 0,
   });
 

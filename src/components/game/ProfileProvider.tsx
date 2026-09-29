@@ -26,10 +26,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setUsername = useCallback(
-    (name: string) => commit((p) => ({ ...p, username: name.slice(0, 16) })),
+    (name: string) => commit((p) => ({ ...p, username: name.slice(0, 16), updatedAt: Date.now() })),
     [commit],
   );
-  const setAvatar = useCallback((id: string) => commit((p) => ({ ...p, avatarId: id })), [commit]);
+  const setAvatar = useCallback(
+    (id: string) => commit((p) => ({ ...p, avatarId: id, updatedAt: Date.now() })),
+    [commit],
+  );
   const recordMatch = useCallback((o: MatchOutcome) => commit((p) => applyMatch(p, o)), [commit]);
   const addXp = useCallback(
     (amount: number) => commit((p) => (amount > 0 ? { ...p, xp: p.xp + Math.floor(amount) } : p)),

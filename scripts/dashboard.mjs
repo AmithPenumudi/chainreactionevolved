@@ -89,7 +89,17 @@ async function fetchMetrics() {
         "Accept-Profile": "metrics",
       },
     });
-    if (!res.ok) throw new Error(`${view}: ${res.status} ${await res.text()}`);
+    if (!res.ok) {
+      const body = await res.text();
+      if (body.includes("Invalid schema")) {
+        throw new Error(
+          "The `metrics` schema is not exposed to the Data API, so its views cannot be read.\n" +
+            "Add `metrics` under Project Settings → Data API → Exposed schemas. The grants in\n" +
+            "0002_metrics.sql still restrict it to service_role, so this does not open it up.",
+        );
+      }
+      throw new Error(`${view}: ${res.status} ${body}`);
+    }
     return res.json();
   };
   const [overview, daily, retention, modeSplit] = await Promise.all([

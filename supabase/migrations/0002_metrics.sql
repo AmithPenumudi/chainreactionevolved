@@ -52,6 +52,11 @@ create schema if not exists metrics;
 -- Only the service_role may read these, and that key never leaves your machine: the dashboard
 -- is generated locally by `npm run dashboard`. Neither `anon` nor `authenticated` is granted
 -- anything here, so the views are unreachable from the game even if its key leaks.
+--
+-- SETUP: for the dashboard to read these, add `metrics` to Project Settings → Data API →
+-- Exposed schemas. Exposing a schema only lets PostgREST route to it; the grants below still
+-- decide who may read, and the game's roles are granted nothing. Verified: with the schema
+-- unexposed, even the service_role gets "Invalid schema: metrics".
 grant usage on schema metrics to service_role;
 alter default privileges in schema metrics grant select on tables to service_role;
 

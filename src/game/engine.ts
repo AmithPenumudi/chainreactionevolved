@@ -114,6 +114,8 @@ export interface MoveResult {
   energyDelta?: number;
   /** If true, do not rotate to next player after commit (Double Drop / power-tile bonus). */
   keepTurn?: boolean;
+  /** If true, the mover is owed one more placement after this move (Double Drop). */
+  grantsExtraPlacement?: boolean;
   /** Whether this move consumed a power-tile bonus. */
   usedPowerBonus?: boolean;
   /** Which power tiles the player captured during this move (grant bonus on commit). */
@@ -225,6 +227,14 @@ export function makeInitialState(
   };
 }
 
+/** Drops shield / fortify / EMP state — used when a cell changes hands or is emptied. */
+function clearCellModifiers(cell: Cell): void {
+  cell.shielded = false;
+  cell.fortified = false;
+  cell.empLockedFor = undefined;
+  cell.empLockedUntilTurn = undefined;
+}
+
 /** Deposit one orb into (r,c), honoring shield/portal/dead-zone rules. */
 function depositOrb(
   board: BoardState,
@@ -263,7 +273,11 @@ function depositOrb(
   }
   const prevOwner = target.owner;
   target.orbs += 1;
-  if (prevOwner !== owner) captureCount.n += 1;
+  if (prevOwner !== owner) {
+    captureCount.n += 1;
+    // Defensive modifiers belong to the previous owner and do not transfer with the cell.
+    clearCellModifiers(target);
+  }
   target.owner = owner;
 }
 
@@ -298,6 +312,9 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
   else if (chainCount >= 5) energyDelta += 10;
   energyDelta += eliminatedThisMove.length * 20;
 
+  // A queued extra placement (Double Drop or an Arena power-tile bonus) keeps the turn.
+  const isExtra = state.extraPlacementFor === player;
+
   return {
     boardBefore,
     boardAfter: board,
@@ -311,6 +328,8 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
     col: c,
     energyDelta,
     capturedPowerTiles,
+    keepTurn: isExtra,
+    usedPowerBonus: isExtra && state.modeConfig.specialTiles,
   };
 }
 
@@ -330,7 +349,10 @@ export function resolveExplosions(
   let chainCount = 0;
   const capturedCounter = { n: 0 };
 
-  const eliminatedSoFar = new Set<PlayerId>();
+  // Players already out of the game must not be "eliminated" again by a later chain.
+  const eliminatedSoFar = new Set<PlayerId>(
+    state.players.filter((p) => state.eliminated[p.id]).map((p) => p.id),
+  );
   const eliminatedThisMove: PlayerId[] = [];
 
   let safety = 0;
@@ -368,8 +390,9 @@ export function resolveExplosions(
       if (cell.fortified) cell.fortified = false;
       if (cell.orbs <= 0) {
         cell.orbs = 0;
-        // Preserve tile & portalPairId; drop ownership.
+        // Preserve tile & portalPairId; drop ownership and any modifiers.
         cell.owner = null;
+        clearCellModifiers(cell);
       }
       const orbsPerNeighbor = isAmplifier ? 2 : 1;
       for (const [nr, nc] of propagatingNeighbors(board, u.row, u.col)) {
@@ -401,17 +424,38 @@ export function resolveExplosions(
       hops: hops.length ? hops : undefined,
     });
 
-    const activated = state.players.filter((p) => state.hasMoved[p.id] || p.id === player);
-    const alive = activated.filter((p) => !eliminatedSoFar.has(p.id));
-    if (alive.length <= 1 && activated.length >= 2) break;
+    // Players who have not moved yet are still in the game, so they count as alive.
+    const alive = state.players.filter((p) => !eliminatedSoFar.has(p.id));
+    if (alive.length <= 1 && state.players.length >= 2) break;
 
-    if (++safety > maxIters) break;
+    if (++safety > maxIters) {
+      // The board holds more orbs than it can ever stabilise (e.g. a dense board that just
+      // shrank, or an amplifier feedback loop). Rather than hand back a permanently unstable
+      // board, the overflow is discarded so every cell ends below its critical mass.
+      for (let rr = 0; rr < board.rows; rr++) {
+        for (let cc = 0; cc < board.cols; cc++) {
+          const cell = board.cells[idx(board, rr, cc)];
+          if (cell.tile === "wall" || cell.tile === "dead" || cell.owner === null) continue;
+          cell.orbs = Math.min(cell.orbs, effectiveCriticalMass(board, rr, cc) - 1);
+          if (cell.orbs <= 0) {
+            cell.orbs = 0;
+            cell.owner = null;
+            clearCellModifiers(cell);
+          }
+        }
+      }
+      steps.push({
+        explosions: [],
+        boardAfter: cloneBoard(board),
+        eliminatedAfter: [],
+      });
+      break;
+    }
   }
 
   let winner: PlayerId | null = null;
-  const activated = state.players.filter((p) => state.hasMoved[p.id] || p.id === player);
-  if (activated.length >= 2) {
-    const alive = activated.filter((p) => !eliminatedSoFar.has(p.id));
+  if (state.players.length >= 2) {
+    const alive = state.players.filter((p) => !eliminatedSoFar.has(p.id));
     if (alive.length === 1) winner = alive[0].id;
   }
 
@@ -484,6 +528,8 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     // Consumed an extra placement.
     extraPlacementFor = null;
   }
+  // Double Drop: the caster still owes one more placement.
+  if (res.grantsExtraPlacement && winner === null) extraPlacementFor = res.player;
   // Consume power bonus if used by this move.
   if (res.usedPowerBonus && powerBonus[res.player] > 0) {
     powerBonus[res.player] -= 1;
@@ -569,28 +615,36 @@ export function applyShrink(state: GameState): GameState | null {
   }
   const board: BoardState = { rows: newRows, cols: newCols, cells: newCells };
 
-  const { eliminatedThisMove: elimNew, capturedCells } = resolveExplosions(
+  const { capturedCells } = resolveExplosions(
     state,
     board,
     state.players[state.currentPlayerIdx].id,
   );
+
+  // Losing the outer ring can wipe a player out without any explosion, so eliminations are
+  // decided from final ownership rather than from the chain resolver.
   const eliminated = state.eliminated.slice();
-  for (const pid of elimNew) eliminated[pid] = true;
+  for (const p of state.players) {
+    if (eliminated[p.id] || !state.hasMoved[p.id]) continue;
+    if (cellsOwnedBy(board, p.id) === 0) eliminated[p.id] = true;
+  }
 
   let winner = state.winner;
   let draw = state.draw;
-  const activated = state.players.filter((p) => state.hasMoved[p.id]);
-  if (activated.length >= 2) {
-    const alive = activated.filter((p) => !eliminated[p.id]);
-    if (alive.length === 1) winner = alive[0].id;
-    if (alive.length === 0 && state.players.every((p) => state.hasMoved[p.id])) {
-      draw = true;
-    }
+  const alive = state.players.filter((p) => !eliminated[p.id]);
+  if (alive.length === 1) winner = alive[0].id;
+  if (alive.length === 0) draw = true;
+
+  // Never leave the turn on a player who was just eliminated.
+  let currentPlayerIdx = state.currentPlayerIdx;
+  if (winner === null && !draw && eliminated[state.players[currentPlayerIdx].id]) {
+    currentPlayerIdx = nextPlayerIdx({ ...state, eliminated });
   }
 
   return {
     ...state,
     board,
+    currentPlayerIdx,
     eliminated,
     winner,
     draw,

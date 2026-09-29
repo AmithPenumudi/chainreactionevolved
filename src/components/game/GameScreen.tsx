@@ -21,7 +21,7 @@ import { chooseAIMove, chooseAIAction } from "@/game/ai";
 import { MatchConfig } from "./SetupScreen";
 import { CellView } from "./CellView";
 import { AbilityBar } from "./AbilityBar";
-import { colorFor, PLAYER_SYMBOLS } from "@/game/colors";
+import { colorFor, PLAYER_SYMBOLS, lighten, darken } from "@/game/colors";
 import { VictoryScreen } from "./VictoryScreen";
 import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
@@ -253,6 +253,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   const playResult = async (res: MoveResult, abilityId?: AbilityId) => {
     trackResult(res, abilityId);
     const willShrink =
+      res.winner === null &&
       state.rules.enableShrink &&
       state.rules.shrinkIntervalRounds > 0 &&
       (state.turn + 1) % state.rules.shrinkIntervalRounds === 0;
@@ -273,15 +274,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     if (!canPlace(state, r, c)) return;
     const res = applyMove(state, r, c);
     if (!res) return;
-    // Arena: if this player has a power-tile bonus queued, this placement consumes it
-    // and they get one extra placement immediately after chains resolve.
-    if (
-      state.modeConfig.specialTiles &&
-      state.extraPlacementFor === state.players[state.currentPlayerIdx].id
-    ) {
-      res.usedPowerBonus = true;
-      res.keepTurn = true;
-    }
+    // Extra placements (Double Drop / Arena power bonus) are resolved inside the engine.
     await playResult(res);
   };
 
@@ -613,7 +606,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                       <span
                         className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px]"
                         style={{
-                          background: `radial-gradient(circle at 32% 30%, oklch(from ${color} calc(l + 0.15) c h), ${color})`,
+                          background: `radial-gradient(circle at 32% 30%, ${lighten(color, 18)}, ${color})`,
                           color: "oklch(0.12 0 0)",
                         }}
                       >
@@ -730,7 +723,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                       top: f.y,
                       width: f.size,
                       height: f.size,
-                      background: `radial-gradient(circle at 32% 30%, oklch(from ${f.color} calc(l + 0.18) c h) 0%, ${f.color} 45%, oklch(from ${f.color} calc(l - 0.14) c h) 100%)`,
+                      background: `radial-gradient(circle at 32% 30%, ${lighten(f.color, 22)} 0%, ${f.color} 45%, ${darken(f.color, 25)} 100%)`,
                       // @ts-expect-error css vars
                       "--tx": `${f.tx}px`,
                       "--ty": `${f.ty}px`,
@@ -786,7 +779,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                 <span
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-full"
                   style={{
-                    background: `radial-gradient(circle at 32% 30%, oklch(from ${currentColor} calc(l + 0.15) c h), ${currentColor})`,
+                    background: `radial-gradient(circle at 32% 30%, ${lighten(currentColor, 18)}, ${currentColor})`,
                     color: "oklch(0.12 0 0)",
                   }}
                 >
@@ -809,7 +802,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               </div>
               {extraPlacement && (
                 <div className="mt-2 text-[10px] tracking-[0.2em] text-[oklch(0.78_0.14_60)]">
-                  ⚡ POWER TILE — place a bonus orb
+                  ⚡ {modeConfig.specialTiles ? "POWER TILE" : "DOUBLE DROP"} — place a bonus orb
                 </div>
               )}
               {selectedAbility && (
@@ -1024,7 +1017,9 @@ function computeSize(rows: number, cols: number) {
   const maxH = window.innerHeight - 220;
   const byW = Math.floor((maxW - cols * CELL_GAP - BOARD_PADDING * 2) / cols);
   const byH = Math.floor((maxH - rows * CELL_GAP - BOARD_PADDING * 2) / rows);
-  return Math.max(28, Math.min(72, Math.min(byW, byH)));
+  // The floor is small on purpose: a 15-column board must still fit a phone's width, otherwise
+  // the whole page grows wider than the screen and clips the board and player cards.
+  return Math.max(16, Math.min(72, Math.min(byW, byH)));
 }
 
 export default GameScreen;

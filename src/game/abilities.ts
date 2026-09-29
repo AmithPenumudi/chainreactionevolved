@@ -122,6 +122,24 @@ export function abilityById(id: AbilityId): AbilityDef {
   return ABILITIES.find((a) => a.id === id)!;
 }
 
+/** The board can be poked from anywhere (UI, AI), so every cast re-checks its own targets. */
+function targetsAreValid(state: GameState, def: AbilityDef, targets: [number, number][]): boolean {
+  if (targets.length !== def.targets) return false;
+  const inBounds = ([r, c]: [number, number]) =>
+    Number.isInteger(r) &&
+    Number.isInteger(c) &&
+    r >= 0 &&
+    c >= 0 &&
+    r < state.board.rows &&
+    c < state.board.cols;
+  if (!targets.every(inBounds)) return false;
+  if (def.targets >= 1 && !def.validate(state, targets[0][0], targets[0][1], 0)) return false;
+  if (def.targets === 2 && !def.validate(state, targets[1][0], targets[1][1], 1, targets[0])) {
+    return false;
+  }
+  return true;
+}
+
 /** Build a MoveResult representing an ability-cast on the board. */
 export function castAbility(
   state: GameState,
@@ -129,13 +147,16 @@ export function castAbility(
   targets: [number, number][],
 ): MoveResult | null {
   const def = abilityById(id);
-  if (state.energy[state.players[state.currentPlayerIdx].id] < def.cost) return null;
+  if (state.winner !== null || state.draw || !state.modeConfig.abilities) return null;
   const player = state.players[state.currentPlayerIdx].id;
+  if (state.energy[player] < def.cost) return null;
+  if (!targetsAreValid(state, def, targets)) return null;
   const boardBefore = cloneBoard(state.board);
   const board = cloneBoard(state.board);
 
   const usedPowerBonus = false;
   let keepTurn = false;
+  let grantsExtraPlacement = false;
   let capturedPowerTiles = 0;
 
   switch (id) {
@@ -157,7 +178,10 @@ export function castAbility(
       break;
     }
     case "double-drop": {
+      // The cast itself is free of placements: the caster keeps the turn and owes two drops,
+      // so the first one is flagged as an "extra" placement that also keeps the turn.
       keepTurn = true;
+      grantsExtraPlacement = true;
       break;
     }
     case "emp": {
@@ -176,7 +200,13 @@ export function castAbility(
       const dst = board.cells[idx(board, dr, dc)];
       if (src.orbs <= 0) return null;
       src.orbs -= 1;
-      if (src.orbs === 0) src.owner = null;
+      if (src.orbs === 0) {
+        src.owner = null;
+        src.shielded = false;
+        src.fortified = false;
+        src.empLockedFor = undefined;
+        src.empLockedUntilTurn = undefined;
+      }
       const wasPower = dst.tile === "power" && dst.owner !== player;
       dst.orbs += 1;
       dst.owner = player;
@@ -199,6 +229,12 @@ export function castAbility(
     player,
   );
 
+  // Casting while a Double Drop placement is still owed must not eat that placement.
+  if (state.extraPlacementFor === player) {
+    keepTurn = true;
+    grantsExtraPlacement = true;
+  }
+
   // Abilities also grant energy from resulting chains (but not the placement bonus).
   let energyDelta = -def.cost;
   energyDelta += chainCount * 5;
@@ -220,6 +256,7 @@ export function castAbility(
     col: targets[0]?.[1] ?? 0,
     energyDelta,
     keepTurn,
+    grantsExtraPlacement,
     usedPowerBonus,
     capturedPowerTiles,
   };

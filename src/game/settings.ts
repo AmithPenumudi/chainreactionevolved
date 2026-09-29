@@ -30,13 +30,39 @@ export const DEFAULT_SETTINGS: GameSettings = {
 
 const STORAGE_KEY = "cr-settings-v1";
 
+/** Keeps only values of the right type and range; everything else falls back to defaults. */
+export function sanitizeSettings(raw: unknown): GameSettings {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return DEFAULT_SETTINGS;
+  const p = raw as Record<string, unknown>;
+  const bool = (k: keyof GameSettings) =>
+    typeof p[k] === "boolean" ? (p[k] as boolean) : (DEFAULT_SETTINGS[k] as boolean);
+  const vol = (k: "sfxVolume" | "musicVolume") => {
+    const v = p[k];
+    return typeof v === "number" && Number.isFinite(v)
+      ? Math.min(100, Math.max(0, v))
+      : DEFAULT_SETTINGS[k];
+  };
+  const speed = p.chainSpeed;
+  return {
+    chainSpeed: speed === "slow" || speed === "normal" || speed === "fast" ? speed : "normal",
+    turnConfirmation: bool("turnConfirmation"),
+    showCriticalCells: bool("showCriticalCells"),
+    masterSound: bool("masterSound"),
+    soundEffects: bool("soundEffects"),
+    music: bool("music"),
+    sfxVolume: vol("sfxVolume"),
+    musicVolume: vol("musicVolume"),
+    orbMotion: bool("orbMotion"),
+    reducedMotion: bool("reducedMotion"),
+  };
+}
+
 export function loadSettings(): GameSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<GameSettings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return sanitizeSettings(JSON.parse(raw));
   } catch {
     return DEFAULT_SETTINGS;
   }

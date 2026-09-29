@@ -516,7 +516,11 @@ function pickRotating(pool: ChallengeDef[], key: string, count: number): string[
   const seed = hashString(key);
   const idx: number[] = [];
   let cursor = seed % pool.length;
-  const step = 1 + (seed % (pool.length - 1));
+  // The step must be coprime with the pool size, otherwise the cursor cycles through fewer
+  // than `count` distinct entries and this loop would never finish.
+  let step = 1 + (seed % Math.max(1, pool.length - 1));
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  while (pool.length > 1 && gcd(step, pool.length) !== 1) step += 1;
   while (idx.length < Math.min(count, pool.length)) {
     if (!idx.includes(cursor)) idx.push(cursor);
     cursor = (cursor + step) % pool.length;
@@ -562,12 +566,47 @@ export function freshState(now = Date.now()): ChallengeState {
 
 const STORAGE_KEY = "cr-challenges-v1";
 
+function sanitizeChallengeState(raw: unknown): Partial<ChallengeState> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const p = raw as Record<string, unknown>;
+  const out: Partial<ChallengeState> = {};
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === "object" && !Array.isArray(v);
+  const strArr = (v: unknown) =>
+    Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : undefined;
+  if (typeof p.dailyKey === "string") out.dailyKey = p.dailyKey;
+  if (typeof p.weeklyKey === "string") out.weeklyKey = p.weeklyKey;
+  const d = strArr(p.dailyIds);
+  if (d) out.dailyIds = d;
+  const w = strArr(p.weeklyIds);
+  if (w) out.weeklyIds = w;
+  if (isObj(p.progress)) {
+    out.progress = {};
+    for (const [k, v] of Object.entries(p.progress))
+      if (typeof v === "number" && Number.isFinite(v) && v >= 0) out.progress[k] = v;
+  }
+  if (isObj(p.claimed)) {
+    out.claimed = {};
+    for (const [k, v] of Object.entries(p.claimed)) if (v === true) out.claimed[k] = true;
+  }
+  if (isObj(p.sets)) {
+    out.sets = {};
+    for (const [k, v] of Object.entries(p.sets)) {
+      const arr = strArr(v);
+      if (arr) out.sets[k] = arr;
+    }
+  }
+  if (typeof p.xpClaimed === "number" && Number.isFinite(p.xpClaimed) && p.xpClaimed >= 0)
+    out.xpClaimed = p.xpClaimed;
+  return out;
+}
+
 export function loadChallenges(): ChallengeState {
   if (typeof window === "undefined") return freshState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return freshState();
-    const parsed = JSON.parse(raw) as Partial<ChallengeState>;
+    const parsed = sanitizeChallengeState(JSON.parse(raw));
     const merged = rollPeriods({ ...freshState(), ...parsed });
     // Drop stale ids from an older challenge pool and repick for this period.
     const valid = (ids: string[]) => ids.every((id) => Boolean(challengeById(id)));

@@ -8,6 +8,12 @@ for web as a Cloudflare Worker.
 
 ## Ground rules
 
+- **Keep `ARCHITECTURE.md` current, in the same commit as the change.** This is a standing
+  instruction from the project owner, not a nicety. If a change adds a module, alters a
+  decision, introduces a trap, or moves something off the "deliberately not built yet" list,
+  the doc changes with it. When finishing any non-trivial task, check the doc before
+  committing and say whether it needed updating.
+
 - **`src/game/*` stays pure** — no React, no DOM, no network. That is what makes the engine
   fuzz-testable and lets the AI run in a Web Worker.
 - **Never use CSS relative colour syntax** (`oklch(from ...)`). Android WebViews are often older

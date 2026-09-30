@@ -3,6 +3,11 @@
 Chain Reaction: Evolved — a turn-based grid game. Players drop orbs into cells; a cell at its
 critical mass explodes into its neighbours, which can cascade. Last player holding cells wins.
 
+> **This file is maintained, not archived.** Any change that alters how the system works —
+> a new module, a changed decision, a new trap, something moved off the deferred list — updates
+> this file in the same commit. A stale architecture doc is worse than none, because it is
+> trusted. If you are reading this and it disagrees with the code, the code is right: fix the doc.
+
 This document is the map of the codebase and, more importantly, the **reasoning behind it** —
 the decisions and traps that are not visible from reading the code. Start here when picking the
 project up cold. For how to test, see `TESTING.md`.
@@ -194,6 +199,11 @@ metrics: a session spanning midnight splits across both days, day boundaries are
 date parts so DST's 23- and 25-hour days stay correct, a backwards clock contributes zero, and one
 uninterrupted stretch caps at 4h so a device left awake is not counted as play.
 
+`src/game/metrics/charts.ts` holds the chart geometry as pure functions — scales anchored at
+zero, bar thickness capped so marks never fill their slot, stacked-bar layout, and a
+fits-with-padding check so an in-segment label is never clipped. Kept separate from rendering so
+the maths is testable without a DOM.
+
 Dashboard views live in a **`metrics` schema**, outside `public`. Run `npm run dashboard` — it
 reads `.env.local` in Node and writes a self-contained `dashboard.html`, so the `service_role`
 key never enters a browser bundle. `npm run dashboard -- --demo` renders sample data.
@@ -214,6 +224,19 @@ orb rendered **black** and the game was unplayable while all tests passed.
 must stay ES5 and inline: on Chrome < 111 the React bundle cannot even be parsed, so this is the
 only code that can run and explain the blank screen.
 
+**Feedback channels.** `sound.ts` (WebAudio blips) and `haptics.ts` (Vibration API) are both
+best-effort: they no-op when the platform lacks the API, when the setting is off, or under
+Reduced Motion, and never throw. Explosions are throttled in both so a long chain reads as one
+event rather than a machine-gun.
+
+**When something breaks at runtime.** `ErrorBoundary` catches render errors and shows a recovery
+screen instead of a blank page; `src/lib/crash-log.ts` keeps the last few errors on the device so
+a player can copy them from Settings → Support. The JS stack and React's component stack get
+separate length budgets — concatenating them let a long stack silently drop the component tree,
+which is the more useful half. Separately, `error-capture.ts`, `error-page.ts` and
+`lovable-error-reporting.ts` are pre-existing TanStack/Lovable server-side plumbing for the web
+build; they are not part of the game and are not dead code.
+
 **Board sizing** lives in `src/game/board-size.ts` (pure, tested). Portrait phones, landscape
 phones (a two-column layout via the `land:` CSS variant) and desktop each get their own fit.
 Boards whose fitted cells fall below `ZOOM_BELOW` offer a zoom toggle rather than shipping
@@ -233,6 +256,7 @@ collide and React silently duplicates or omits children. This was a real intermi
 ```bash
 npm run dev              # web dev server
 npm test                 # full suite (~3 min)
+npm run test:watch       # re-run affected tests while developing
 npm run lint             # eslint (android/ and build output are ignored)
 npm run build            # web / Cloudflare
 npm run build:capacitor  # Android web assets

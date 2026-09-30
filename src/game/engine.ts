@@ -89,6 +89,13 @@ export interface GameState {
   powerBonus: number[];
   /** Set to a player id if that player's next placement is an extra placement (Double Drop or Power Tile bonus). */
   extraPlacementFor: PlayerId | null;
+  /**
+   * True once the player who owes an extra placement has spent an ability during that window.
+   * An owed drop keeps the turn, and without this a cast that keeps the turn could be repeated
+   * forever — on an amplifier board each cast refunds its own cost from the chain it starts, so
+   * the opponent never moved again. One cast is allowed; the second is rejected.
+   */
+  extraPlacementCastUsed: boolean;
 }
 
 export interface ExplosionStep {
@@ -118,6 +125,14 @@ export interface MoveResult {
   grantsExtraPlacement?: boolean;
   /** Whether this move consumed a power-tile bonus. */
   usedPowerBonus?: boolean;
+  /** True for an ability cast; false/absent for a placement. Abilities do not spend a drop. */
+  isAbility?: boolean;
+  /**
+   * True when `resolveExplosions` hit its iteration cap and discarded the overflow. The cascade
+   * really happened, but its counts describe an oscillation rather than a chain a player built,
+   * so they must not be recorded as a personal best.
+   */
+  truncated?: boolean;
   /** Which power tiles the player captured during this move (grant bonus on commit). */
   capturedPowerTiles?: number;
 }
@@ -170,7 +185,7 @@ export function neighbors(b: BoardState, r: number, c: number): [number, number]
 }
 
 /** Neighbors filtered for arena: walls are impassable to explosions. */
-function propagatingNeighbors(b: BoardState, r: number, c: number): [number, number][] {
+export function propagatingNeighbors(b: BoardState, r: number, c: number): [number, number][] {
   return neighbors(b, r, c).filter(([nr, nc]) => {
     const n = b.cells[nr * b.cols + nc];
     return n.tile !== "wall";
@@ -178,7 +193,9 @@ function propagatingNeighbors(b: BoardState, r: number, c: number): [number, num
 }
 
 export function canPlace(state: GameState, r: number, c: number): boolean {
-  if (state.winner !== null) return false;
+  // A draw is as final as a winner. Only `winner` was checked here, so a drawn game (every
+  // remaining player wiped out by the same Sudden Death shrink) still accepted placements.
+  if (state.winner !== null || state.draw) return false;
   const p = state.players[state.currentPlayerIdx].id;
   const cell = state.board.cells[idx(state.board, r, c)];
   if (cell.tile === "wall" || cell.tile === "dead") return false;
@@ -190,6 +207,20 @@ export function canPlace(state: GameState, r: number, c: number): boolean {
     return false;
   }
   return cell.owner === null || cell.owner === p;
+}
+
+/**
+ * Whether the player on turn can place anywhere at all.
+ *
+ * Normally owning a cell guarantees a move, but an EMP lock on a player's only cell while every
+ * other cell belongs to an opponent leaves them with nothing legal. They are not eliminated
+ * (they still hold a cell), so without this the turn would sit on them forever.
+ */
+export function hasLegalMove(state: GameState): boolean {
+  for (let r = 0; r < state.board.rows; r++) {
+    for (let c = 0; c < state.board.cols; c++) if (canPlace(state, r, c)) return true;
+  }
+  return false;
 }
 
 export function makeInitialState(
@@ -224,6 +255,7 @@ export function makeInitialState(
     energy: players.map(() => 0),
     powerBonus: players.map(() => 0),
     extraPlacementFor: null,
+    extraPlacementCastUsed: false,
   };
 }
 
@@ -314,11 +346,8 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
   startCell.owner = player;
   const capturedPowerTiles = startCell.tile === "power" && wasNotOwned ? 1 : 0;
 
-  const { steps, chainCount, capturedCells, eliminatedThisMove, winner } = resolveExplosions(
-    state,
-    board,
-    player,
-  );
+  const { steps, chainCount, capturedCells, eliminatedThisMove, winner, truncated } =
+    resolveExplosions(state, board, player);
 
   // Energy grants (only meaningful in abilities mode; safe to compute always).
   let energyDelta = 2; // placement
@@ -346,6 +375,7 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
     capturedPowerTiles,
     keepTurn: isExtra,
     usedPowerBonus: isExtra && state.modeConfig.specialTiles,
+    truncated,
   };
 }
 
@@ -360,6 +390,7 @@ export function resolveExplosions(
   capturedCells: number;
   eliminatedThisMove: PlayerId[];
   winner: PlayerId | null;
+  truncated: boolean;
 } {
   const steps: ExplosionStep[] = [];
   let chainCount = 0;
@@ -372,6 +403,7 @@ export function resolveExplosions(
   const eliminatedThisMove: PlayerId[] = [];
 
   let safety = 0;
+  let truncated = false;
   // Amplifiers inject orbs (2 per neighbor instead of 1) rather than conserving them,
   // so a densely-packed amplifier cascade can enter a sustained full-board oscillation
   // instead of naturally draining to a stable state. Cap generously above any real
@@ -401,7 +433,20 @@ export function resolveExplosions(
       const cell = board.cells[k];
       const cm = effectiveCriticalMass(board, u.row, u.col);
       const isAmplifier = cell.tile === "amplifier";
-      cell.orbs -= cm;
+      const orbsPerNeighbor = isAmplifier ? 2 : 1;
+      const outlets = propagatingNeighbors(board, u.row, u.col);
+      const ejected = outlets.length * orbsPerNeighbor;
+      // A cell may only lose the orbs it actually throws out. `cm` can exceed the number of
+      // outlets — `fortified` and an owned `reactor` each add one, and the floor at 2 lifts a
+      // cell with a single non-wall neighbour — and subtracting `cm` regardless quietly deleted
+      // the difference. A fortified cell ate one orb every time it fired and a 1xN board lost
+      // one per explosion. The surplus now stays behind instead.
+      //
+      // A cell with no outlet at all (sealed in by walls) is the one case that must still
+      // subtract `cm`: it has nowhere to send orbs, so keeping them would leave it permanently
+      // above its critical mass. It is a sink, like a dead tile.
+      const drained = outlets.length === 0 ? cm : Math.min(cm, ejected);
+      cell.orbs -= drained;
       // Fortify is consumed by explosion.
       if (cell.fortified) cell.fortified = false;
       if (cell.orbs <= 0) {
@@ -410,8 +455,7 @@ export function resolveExplosions(
         cell.owner = null;
         clearCellModifiers(cell);
       }
-      const orbsPerNeighbor = isAmplifier ? 2 : 1;
-      for (const [nr, nc] of propagatingNeighbors(board, u.row, u.col)) {
+      for (const [nr, nc] of outlets) {
         for (let i = 0; i < orbsPerNeighbor; i++) {
           depositOrb(board, nr, nc, u.owner, false, capturedCounter, hops, u.row, u.col);
         }
@@ -445,6 +489,7 @@ export function resolveExplosions(
     if (alive.length <= 1 && state.players.length >= 2) break;
 
     if (++safety > maxIters) {
+      truncated = true;
       // The board holds more orbs than it can ever stabilise (e.g. a dense board that just
       // shrank, or an amplifier feedback loop). Rather than hand back a permanently unstable
       // board, the overflow is discarded so every cell ends below its critical mass.
@@ -481,6 +526,7 @@ export function resolveExplosions(
     capturedCells: capturedCounter.n,
     eliminatedThisMove,
     winner,
+    truncated,
   };
 }
 
@@ -540,9 +586,15 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
   // Determine whether the player keeps the turn (extra placement).
   let extraPlacementFor = state.extraPlacementFor;
   const keepTurn = !!res.keepTurn;
-  if (extraPlacementFor === res.player) {
+  // An ability is not a drop, so it leaves an owed placement standing — but it is allowed to do
+  // that only once per window (see `extraPlacementCastUsed`).
+  let extraPlacementCastUsed = state.extraPlacementCastUsed;
+  if (res.isAbility) {
+    if (extraPlacementFor === res.player) extraPlacementCastUsed = true;
+  } else if (extraPlacementFor === res.player) {
     // Consumed an extra placement.
     extraPlacementFor = null;
+    extraPlacementCastUsed = false;
   }
   // Double Drop: the caster still owes one more placement.
   if (res.grantsExtraPlacement && winner === null) extraPlacementFor = res.player;
@@ -553,13 +605,21 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
 
   const turnAdvance = keepTurn && winner === null;
 
+  // A cascade that hit the iteration cap is an oscillation, not a chain a player built: on a
+  // dense amplifier board it counts thousands of explosions on a board of a few dozen cells.
+  // Recording that as "biggest chain" makes the stat meaningless, so it is clamped to something
+  // the board could actually produce.
+  const reportedChain = res.truncated
+    ? Math.min(res.chainCount, res.boardAfter.rows * res.boardAfter.cols)
+    : res.chainCount;
+
   const nextState: GameState = {
     ...state,
     board: res.boardAfter,
     hasMoved,
     eliminated,
     turn: state.turn + 1,
-    largestChain: Math.max(state.largestChain, res.chainCount),
+    largestChain: Math.max(state.largestChain, reportedChain),
     totalExplosions: state.totalExplosions + res.chainCount,
     totalCapturedCells: state.totalCapturedCells + res.capturedCells,
     winner,
@@ -567,6 +627,7 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     energy,
     powerBonus,
     extraPlacementFor,
+    extraPlacementCastUsed,
     turnStartAt: Date.now(),
   };
 
@@ -577,13 +638,25 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     // Sweep expiring shields/EMPs for the incoming player.
     const board = clearExpiringModifiers(nextState.board, nextPid, nextState.turn);
 
-    // Grant extra placement if this player has a stored power-tile bonus.
+    // Grant extra placement if this player has a stored power-tile bonus. An owed placement that
+    // belongs to a player who has since been eliminated is dropped first: it can never be played,
+    // and while it sat there no other player could ever be granted one.
     let extra = nextState.extraPlacementFor;
+    if (extra !== null && eliminated[extra]) extra = null;
     if (state.modeConfig.specialTiles && powerBonus[nextPid] > 0 && extra === null) {
       extra = nextPid;
     }
 
-    return { ...nextState, board, currentPlayerIdx: nextIdx, extraPlacementFor: extra };
+    return {
+      ...nextState,
+      board,
+      currentPlayerIdx: nextIdx,
+      extraPlacementFor: extra,
+      extraPlacementCastUsed:
+        extra === nextState.extraPlacementFor && extra !== null
+          ? nextState.extraPlacementCastUsed
+          : false,
+    };
   }
   return nextState;
 }
@@ -603,7 +676,16 @@ export function orbsOwnedBy(board: BoardState, pid: PlayerId): number {
 /** Advance the current player without making a move (used for turn timers). */
 export function forfeitTurn(state: GameState): GameState {
   if (state.winner !== null || state.draw) return state;
-  const next: GameState = { ...state, turnStartAt: Date.now(), extraPlacementFor: null };
+  // The turn counter has to move even when nobody played. EMP locks expire against an absolute
+  // turn number, so with `turn` frozen a lock set in a timed game never lifted once both players
+  // started letting the clock run out — the cell stayed unplayable for the rest of the match.
+  const next: GameState = {
+    ...state,
+    turn: state.turn + 1,
+    turnStartAt: Date.now(),
+    extraPlacementFor: null,
+    extraPlacementCastUsed: false,
+  };
   next.currentPlayerIdx = nextPlayerIdx(next);
   const pid = next.players[next.currentPlayerIdx].id;
   next.board = clearExpiringModifiers(next.board, pid, next.turn);
@@ -631,7 +713,7 @@ export function applyShrink(state: GameState): GameState | null {
   }
   const board: BoardState = { rows: newRows, cols: newCols, cells: newCells };
 
-  const { capturedCells } = resolveExplosions(
+  const { capturedCells, chainCount, truncated } = resolveExplosions(
     state,
     board,
     state.players[state.currentPlayerIdx].id,
@@ -657,6 +739,15 @@ export function applyShrink(state: GameState): GameState | null {
     currentPlayerIdx = nextPlayerIdx({ ...state, eliminated });
   }
 
+  // The ring going away can set off a cascade of its own. Only the captures were folded in, so
+  // those explosions were missing from the match totals entirely.
+  const reportedChain = truncated ? Math.min(chainCount, board.rows * board.cols) : chainCount;
+
+  // An owed extra placement cannot survive its owner: left pointing at an eliminated player it
+  // would block every later power-tile bonus, because only one can be outstanding at a time.
+  let extraPlacementFor = state.extraPlacementFor;
+  if (extraPlacementFor !== null && eliminated[extraPlacementFor]) extraPlacementFor = null;
+
   return {
     ...state,
     board,
@@ -666,6 +757,10 @@ export function applyShrink(state: GameState): GameState | null {
     draw,
     shrinkCount: state.shrinkCount + 1,
     totalCapturedCells: state.totalCapturedCells + capturedCells,
+    largestChain: Math.max(state.largestChain, reportedChain),
+    totalExplosions: state.totalExplosions + chainCount,
+    extraPlacementFor,
+    extraPlacementCastUsed: extraPlacementFor === null ? false : state.extraPlacementCastUsed,
     turnStartAt: Date.now(),
     endedAt: winner !== null || draw ? Date.now() : state.endedAt,
   };

@@ -78,6 +78,26 @@ verify a match.
 reduce a cell's neighbour count, `fortified` adds one, an owned `reactor` adds one, and the
 result floors at 2.
 
+**A cell may only lose the orbs it actually throws out.** Critical mass and the number of outlets
+are not the same number — `fortified` and an owned `reactor` each add one, and the floor at 2 lifts
+a cell that has a single non-wall neighbour — so subtracting `cm` on every explosion quietly
+deleted the difference. A fortified cell ate one orb each time it fired; a 1×N board and any
+corridor cell walled in on three sides lost one per explosion. The drain is now
+`min(cm, outlets × orbsPerNeighbour)` and the surplus stays behind. Two deliberate exceptions
+remain, and they are the only ways an orb leaves the board: a `dead` tile absorbs what it is sent,
+and a cell **sealed in by walls** has nowhere to send anything, so it still subtracts `cm` and acts
+as a sink — keeping those orbs would park it permanently above its critical mass and break the
+settled-board invariant.
+
+**A decided game is decided.** `canPlace` refuses on `draw` as well as `winner`; a Sudden Death
+shrink can wipe out every remaining player at once, and only `winner` used to be checked.
+
+**A turn with nothing legal in it.** Owning a cell normally guarantees a move, but an EMP lock on a
+player's only cell while every other cell belongs to an opponent leaves them nothing — and they are
+not eliminated, so no other rule would move the turn along and the match simply stopped. The engine
+exports `hasLegalMove()`, `abilities.ts` exports `hasCastableAbility()`, and `GameScreen` passes the
+turn on when both say no, declaring a draw if it gets all the way round without finding anybody.
+
 **Invariants a settled board must satisfy** (asserted by `engine.invariants.test.ts`):
 
 - no cell at or above its critical mass (unless the game ended mid-cascade)
@@ -90,6 +110,14 @@ result floors at 2.
 dense board can oscillate forever. `resolveExplosions` caps iterations and, on hitting the cap,
 discards the overflow so every cell ends below its critical mass. A permanently unstable board
 would be worse than a slightly wrong one.
+
+> **Trap:** a capped cascade's `chainCount` describes the oscillation, not a chain anyone built —
+> a saturated 6×6 amplifier board counts **over 7000 explosions on 36 cells**. `MoveResult.truncated`
+> marks those, and `commitMove` clamps what they contribute to `largestChain` to the cell count, so
+> "biggest chain" stays a number that means something. `totalExplosions` still gets the raw count,
+> because those explosions did happen. The cap is also the engine's worst case for cost: up to
+> `max(200, rows × cols × 2)` waves, each one a full board scan plus a board clone for the
+> animation, and the AI pays it on every search node that reaches such a position.
 
 ---
 
@@ -105,6 +133,19 @@ Two orthogonal axes:
 **Abilities** (`abilities.ts`, 7 of them) cost energy and produce a `MoveResult` like a normal
 move, so they flow through the same commit path. `castAbility` re-validates its own targets,
 mode and game state — it never trusts the caller, because both the UI and the AI call it.
+
+> **Trap:** an owed Double Drop keeps the turn with its caster, and an ability cast during that
+> window does not spend the drop — so the turn stays too. Unbounded, that is a soft-lock rather than
+> a combo: on an amplifier board each Overload starts a chain that refunds more energy than it cost,
+> so the caster can go on casting and the opponent never moves again (measured: **50 consecutive
+> casts with energy still pinned at 100**). `GameState.extraPlacementCastUsed` allows the owed drop
+> to survive exactly one cast, which is what the combo is for, and refuses the second. `GameScreen`
+> greys the ability bar out once it is spent, rather than offering buttons that do nothing.
+
+**An owed extra placement never outlives its owner.** A Sudden Death shrink can eliminate the player
+holding one, and only one can be outstanding at a time, so a flag left pointing at a dead player
+blocked every later power-tile bonus for the rest of the match. `applyShrink` and `commitMove` both
+drop it.
 
 **Arena** adds tiles: `power`, `portal`, `wall`, `amplifier`, `dead`, `reactor`. Five hand-built
 maps (`arena-maps.ts`) plus a generated **Chaos Grid** (`chaos-grid.ts`) with a seeded PRNG, so a
@@ -132,6 +173,14 @@ search in a Web Worker so the board stays responsive; on the emulator, hard AI o
 board froze the UI for ~1s per move before this, and ~100ms after. It falls back to the main
 thread on any failure — no Worker support, load failure, crash, or timeout — so a turn is never
 lost.
+
+**Two things the turn counter and the shrink must agree on.** `forfeitTurn` advances `turn`: EMP
+locks expire against an absolute turn number, so with the counter frozen a lock set in a timed game
+never lifted once both players started letting the clock run out. Because the shrink is scheduled
+off that same counter, `GameScreen` now also applies the shrink when the turn that timed out is the
+boundary one — otherwise advancing `turn` would step straight over a shrink. And `applyShrink` folds
+the cascade the ring's removal sets off into `largestChain` / `totalExplosions`; only the captures
+were counted, so those explosions were missing from the match totals entirely.
 
 **Sudden Death awareness.** Bots discount edge cells as a shrink approaches and simulate the
 shrink inside their lookahead. Without this, bots hoarded the outer ring that the shrink deletes
@@ -174,13 +223,34 @@ and retries cannot change the result:
 | `currentStreak`             | whichever side played most recently          | A streak resets on a loss, so `max` would be wrong                 |
 | Username / avatar           | last write wins, via `profile.updatedAt`     | A conflict is harmless                                             |
 | Puzzle records              | best medal, fewest moves, highest XP awarded | Never pay the same puzzle out twice                                |
-| Challenge `claimed`         | union, grow-only                             | Forgetting a claim would pay a reward twice                        |
+| Challenge `claimed`         | union, but only within the same period       | Forgetting a claim pays twice; keeping a stale one pays nothing    |
 | Challenge progress          | `max`, but only within the same period       | Once a period rolls over the numbers describe different challenges |
 
 **Sync settles to a fixed point rather than being strictly idempotent.** The first merge
 canonicalises the order of matches that finished in the same millisecond; after that nothing
 changes. Without that fixed point every sync would produce a different blob and trigger another
 write — an infinite loop.
+
+**Commutativity is load-bearing, and three places quietly broke it.** Each one is a pair of devices
+that would have kept overwriting each other forever, because every pass produced a different blob:
+
+- **Period keys.** `mergeChallengeState` used to keep the calling device's `dailyKey` / `weeklyKey`.
+  Those keys are built from the device's **local** calendar day, so a phone and a tablet either side
+  of a date line disagree permanently. The later period now wins, compared chronologically — string
+  order will not do, because the keys are not zero-padded and `"2026-1-9" > "2026-1-10"` as text.
+- **`claimed` across a rollover.** Grow-only is right _within_ a period, but the daily pool rotates
+  and repeats. `rollPeriods` deletes a claim locally when the day turns over; pulling the other
+  device's stale `claimed: true` back in made the fresh challenge with the same id look
+  already-claimed, and **the player never got that reward**. Progress, claims and sets from a side
+  still on an earlier period are now dropped rather than merged. Mastery ids belong to no period and
+  always merge.
+- **The identity tie.** "A tie on `updatedAt` keeps what this device shows" is not commutative, and
+  the tie is the common case, not a freak one: a player who never renamed leaves `updatedAt` at 0 on
+  every device. It is now broken on name-then-avatar.
+
+Key **order** is settled by sorting too (`abilityCounts`, puzzle ids, challenge ids, union sets).
+The contents were already order-independent; the serialised form was not, and a blob that differs
+only in key order still reads as a change to anything comparing it.
 
 **A failed read aborts the pass.** "Read threw" and "no row yet" must not be conflated: pushing
 local over a row you could not read would clobber another device.
@@ -367,6 +437,13 @@ The `service_role` key belongs only in `.env.local` (gitignored). It bypasses RL
    progress.
 7. **Don't rewrite pushed history.** The repo is public and has open pull requests; force-pushing,
    rebasing or amending a pushed commit breaks review threads and anyone's checkout.
+8. **An explosion may not destroy orbs it did not eject.** Subtract `min(cm, outlets)`, never `cm`.
+   The only sanctioned sinks are `dead` tiles and cells sealed in by walls.
+9. **Anything that keeps the turn needs a bound.** `keepTurn` with no budget is a soft-lock: the
+   opponent never moves again. See `extraPlacementCastUsed`.
+10. **Every merge must be commutative, including its tie-breaks and its key order.** Two devices
+    that disagree write to each other forever. `merge.adversarial.test.ts` fuzzes this over 200
+    random pairs and asserts byte-identical results both ways round.
 
 ---
 

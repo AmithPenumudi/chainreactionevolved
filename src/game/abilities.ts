@@ -140,6 +140,26 @@ function targetsAreValid(state: GameState, def: AbilityDef, targets: [number, nu
   return true;
 }
 
+/**
+ * Whether the player on turn could cast anything at all right now.
+ *
+ * Used to tell a genuinely stuck turn (no legal placement and no affordable ability, so the match
+ * would sit there for good) from one where the player still has a move to make.
+ */
+export function hasCastableAbility(state: GameState): boolean {
+  if (state.winner !== null || state.draw || !state.modeConfig.abilities) return false;
+  const player = state.players[state.currentPlayerIdx].id;
+  if (state.extraPlacementFor === player && state.extraPlacementCastUsed) return false;
+  for (const def of ABILITIES) {
+    if (state.energy[player] < def.cost) continue;
+    if (def.targets === 0) return true;
+    for (let r = 0; r < state.board.rows; r++) {
+      for (let c = 0; c < state.board.cols; c++) if (def.validate(state, r, c, 0)) return true;
+    }
+  }
+  return false;
+}
+
 /** Build a MoveResult representing an ability-cast on the board. */
 export function castAbility(
   state: GameState,
@@ -149,6 +169,12 @@ export function castAbility(
   const def = abilityById(id);
   if (state.winner !== null || state.draw || !state.modeConfig.abilities) return null;
   const player = state.players[state.currentPlayerIdx].id;
+  // An owed Double Drop keeps the turn, and a cast during that window does not spend the drop, so
+  // the turn stays too. Unbounded, that is a soft-lock: on an amplifier board each Overload starts
+  // a chain that refunds more energy than it cost, so the caster could go on casting and the
+  // opponent never moved again (measured: 50 consecutive casts, energy still pinned at 100). The
+  // owed drop survives one cast, which is what the combo is for; a second is refused.
+  if (state.extraPlacementFor === player && state.extraPlacementCastUsed) return null;
   if (state.energy[player] < def.cost) return null;
   if (!targetsAreValid(state, def, targets)) return null;
   const boardBefore = cloneBoard(state.board);
@@ -223,11 +249,8 @@ export function castAbility(
     }
   }
 
-  const { steps, chainCount, capturedCells, eliminatedThisMove, winner } = resolveExplosions(
-    state,
-    board,
-    player,
-  );
+  const { steps, chainCount, capturedCells, eliminatedThisMove, winner, truncated } =
+    resolveExplosions(state, board, player);
 
   // Casting while a Double Drop placement is still owed must not eat that placement.
   if (state.extraPlacementFor === player) {
@@ -259,5 +282,7 @@ export function castAbility(
     grantsExtraPlacement,
     usedPowerBonus,
     capturedPowerTiles,
+    isAbility: true,
+    truncated,
   };
 }

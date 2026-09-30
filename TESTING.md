@@ -16,6 +16,7 @@ Several hundred tests across ~30 files (the full run takes a few minutes, mostly
 and brute-force puzzle suites):
 
 Game logic (`src/game/__tests__/`)
+
 - `engine.test.ts` — critical mass, placement rules, chain reactions,
   eliminations, portals, shields, amplifiers, energy cap, board shrink
 - `engine.invariants.test.ts` — seeded fuzz: thousands of random games on every
@@ -39,12 +40,36 @@ Game logic (`src/game/__tests__/`)
 - `haptics.test.ts`, `undo.test.ts`, `a11y.test.ts` — vibration rules, undo budget,
   screen-reader cell labels
 
+Adversarial suites — these go after the positions a player would have to be _trying_ to reach,
+rather than the rules as written. Each assertion that reads like a regression note is one:
+
+- `engine.adversarial.test.ts` — saturated and near-critical boards on every size, amplifier
+  feedback that trips the iteration cap, geometry where critical mass exceeds the number of outlets
+  (fortify, owned reactor, corridor cells, 1×N, cells sealed in by walls), the full critical-mass
+  matrix, portal/amplifier/dead/shield interactions incl. portals with no partner and portals
+  pointing at each other, a frozen state passed through `applyMove`, byte-identical repeat results,
+  a decided game asked to keep playing, an owed placement outliving its owner, an unbounded ability
+  chain, and injected/hand-corrupted boards
+- `ai.adversarial.test.ts` — all nine difficulty pairings to completion, four bots on an arena map,
+  no unaffordable or out-of-range ability cast, no missed win-in-one, no mutation of the position
+  handed to the search, a stale answer arriving after the board moved on, a turn with nothing legal
+  in it, and a cost ceiling on the largest board and on a saturated one
+- `sync/__tests__/merge.adversarial.test.ts` — 200 seeded random device pairs asserting every merge
+  is commutative to the byte, idempotent, and reaches a fixed point within one further pass; plus
+  time-zone-split period keys, a rollover that must not resurrect a claim, and a two-device
+  offline-then-online exchange
+
+Bot decisions are seeded through a stubbed `Math.random` in the adversarial AI suite, so a failure
+there is reproducible from its seed rather than being a flake.
+
 App code (`src/lib/__tests__/`, `src/components/__tests__/`)
+
 - `compat.test.ts`, `index-guard.test.ts` — the "update WebView" guard (the inline
   `index.html` script is executed under both supported and unsupported conditions)
 - `crash-log.test.ts`, `ErrorBoundary.test.tsx` — on-device error log and recovery screen
 
 Component flow (`src/components/game/__tests__/`)
+
 - `GameScreen.flow.test.tsx` — renders the real GameScreen under jsdom and plays
   complete bot-vs-bot matches (classic, 4-player, Sudden Death, Abilities, Arena,
   Blitz timer) to the result screen
@@ -76,8 +101,9 @@ file.
 
 ## 2. Manual regression checklist (Android app)
 
-Lessons from testing on an emulator with an *older WebView* (API 34 image ships
+Lessons from testing on an emulator with an _older WebView_ (API 34 image ships
 Chrome 113 — real phones can be older still):
+
 - Don't use CSS relative colour syntax (`oklch(from …)`, needs Chrome 119): use the
   `lighten` / `darken` / `withAlpha` helpers in `src/game/colors.ts` (`color-mix()`).
   Symptom when broken: every orb renders black.
@@ -85,7 +111,7 @@ Chrome 113 — real phones can be older still):
   `src/routes/index.tsx`. Check: Game → Back → Setup → Back → Home → Back exits.
 - 15-column boards must fit the phone width (no horizontal page overflow).
 - Chrome DevTools can attach to the debug build: `adb forward tcp:9222
-  localabstract:webview_devtools_remote_<pid>` then open `http://localhost:9222/json`.
+localabstract:webview_devtools_remote_<pid>` then open `http://localhost:9222/json`.
 - The `Pixel_2_API_27` emulator image ships Chrome 61. The app cannot run there at all; the
   classic inline script in `capacitor-src/index.html` must show "Update needed" instead of a
   blank white page (the React bundle cannot even be parsed on such a WebView).
@@ -96,7 +122,6 @@ Chrome 113 — real phones can be older still):
   same offline. Check with airplane mode: `adb shell cmd connectivity airplane-mode enable`
   and confirm `document.fonts.check("16px Inter")` is true. `fonts.test.ts` fails if any
   Google Fonts URL creeps back in.
-
 
 Automated tests don't touch the native shell, rendering, or touch input —
 run this by hand after any change before considering it done, and always
@@ -114,11 +139,13 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ### Checklist
 
 **Launch**
+
 - [ ] App installs without error
 - [ ] App launches to the home screen (no crash, no blank/white screen)
 - [ ] Fonts and styling render correctly (not default system font/unstyled)
 
 **Navigation**
+
 - [ ] Quick Play → Match Setup → back button returns to home
 - [ ] Challenges, Puzzles, How To Play, Profile, Settings all open and have a
       working back button
@@ -126,6 +153,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
       (goes back a level, doesn't exit the app unexpectedly)
 
 **Core gameplay (Classic mode, local multiplayer)**
+
 - [ ] Start a Quick Play match with 2 players
 - [ ] Tap an empty cell — orb places, ownership color updates
 - [ ] Tap the same cell again (below critical mass) — orb count increases
@@ -136,22 +164,26 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 - [ ] Rematch and exit-to-home both work from the end screen
 
 **Other modes**
+
 - [ ] Abilities mode: energy bar fills, an ability can be cast, target
       selection works
 - [ ] Arena mode: special tiles (portal/wall/amplifier) render and behave
       distinctly on the board
 
 **Puzzles**
+
 - [ ] Open a puzzle, make moves, solve it — medal screen appears
 - [ ] Puzzle progress persists after closing and reopening the app (force
       close, not just backgrounding)
 
 **Persistence**
+
 - [ ] Profile stats update after a match (games/wins count increments)
 - [ ] Force-close the app (not just background it) and reopen — profile,
       settings, and puzzle/challenge progress all survive
 
 **Device basics**
+
 - [ ] Rotate the device/emulator — layout doesn't break (or is correctly
       locked to one orientation, if that's intended)
 - [ ] Background the app mid-match (Home button) and resume — game state is

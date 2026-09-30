@@ -14,8 +14,9 @@ import {
   neighbors,
   orbsOwnedBy,
   forfeitTurn,
+  hasLegalMove,
 } from "@/game/engine";
-import { AbilityId, abilityById, castAbility } from "@/game/abilities";
+import { AbilityId, abilityById, castAbility, hasCastableAbility } from "@/game/abilities";
 import { getArenaMap } from "@/game/arena-maps";
 import { buildChaosBoard } from "@/game/chaos-grid";
 import { chooseAIActionAsync } from "@/game/ai-client";
@@ -144,7 +145,21 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     if (state.winner !== null || state.draw || anim.running) return;
     const id = setInterval(() => {
       const left = state.rules.turnTimeMs - (Date.now() - state.turnStartAt);
-      if (left <= 0) setState((s) => forfeitTurn(s));
+      if (left <= 0) {
+        setState((s) => {
+          const next = forfeitTurn(s);
+          // A forfeited turn still counts towards the Sudden Death clock. Without this the shrink
+          // was simply skipped whenever the boundary turn was the one that timed out.
+          const every = next.rules.shrinkIntervalRounds;
+          if (next.winner === null && !next.draw && next.rules.enableShrink && every > 0) {
+            if (next.turn !== s.turn && next.turn % every === 0) {
+              const shrunk = applyShrink(next);
+              if (shrunk) return { ...shrunk, turnStartAt: Date.now() };
+            }
+          }
+          return next;
+        });
+      }
     }, 100);
     return () => clearInterval(id);
   }, [state.rules.turnTimeMs, state.turnStartAt, state.winner, state.draw, anim.running]);
@@ -152,6 +167,28 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   useEffect(() => {
     if (!anim.running) setAnim((a) => ({ ...a, displayBoard: state.board }));
   }, [state.board, anim.running]);
+
+  // A turn with nothing legal left in it has to pass itself on. Owning a cell normally guarantees a
+  // placement, but an EMP lock on a player's only cell while every other cell belongs to an
+  // opponent leaves them nothing — and they are not eliminated, so no other rule would ever move
+  // the turn along. Without a timer the match simply stopped here.
+  useEffect(() => {
+    if (anim.running || state.winner !== null || state.draw) return;
+    if (hasLegalMove(state) || hasCastableAbility(state)) return;
+    setState((s) => {
+      if (s.winner !== null || s.draw) return s;
+      if (hasLegalMove(s) || hasCastableAbility(s)) return s;
+      // Hand the turn on until it reaches someone who can play. If it gets all the way round
+      // without finding anybody, the position is dead and the match is a draw — forfeiting on
+      // forever would just spin, because every forfeit changes the state and re-runs this.
+      let next = s;
+      for (let i = 0; i < s.players.length; i++) {
+        next = forfeitTurn(next);
+        if (hasLegalMove(next) || hasCastableAbility(next)) return next;
+      }
+      return { ...next, draw: true, endedAt: Date.now() };
+    });
+  }, [state, anim.running]);
 
   // Reset ability targeting when turn changes
   useEffect(() => {
@@ -170,6 +207,11 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   const currentColor = colorFor(currentPlayer.colorIndex);
 
   const clickable = !anim.running && state.winner === null && !state.draw && !currentPlayer.isAI;
+  // An owed Double Drop survives one ability cast, not two (see `extraPlacementCastUsed`). Once it
+  // is spent, `castAbility` refuses, so the bar is greyed out instead of offering dead buttons.
+  const abilitiesLocked =
+    state.extraPlacementFor === state.players[state.currentPlayerIdx].id &&
+    state.extraPlacementCastUsed;
 
   const turnTimeLeft = useMemo(() => {
     if (state.rules.turnTimeMs <= 0) return Infinity;
@@ -410,7 +452,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       if (cancelled) return;
       // Heavy searches run in a worker so the board stays responsive while the bot thinks.
       const action = await chooseAIActionAsync(state, currentPlayer.difficulty ?? "normal");
-      if (cancelled || !action) return; // the position changed while thinking (e.g. timer forfeit)
+      if (cancelled) return; // the position changed while thinking (e.g. timer forfeit)
+      if (!action) {
+        // No legal placement anywhere — reachable when a bot's only cell is EMP-locked and every
+        // other cell belongs to an opponent. It is not eliminated, so nothing else would ever move
+        // the turn on and the match would sit here for good.
+        setState((s) => (hasLegalMove(s) ? s : forfeitTurn(s)));
+        return;
+      }
       if (action.type === "ability" && action.abilityId && action.targets) {
         const res = castAbility(state, action.abilityId, action.targets);
         if (res) await playResult(res, action.abilityId);
@@ -937,7 +986,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                 energy={state.energy[currentPid]}
                 selectedAbility={selectedAbility}
                 onSelect={onSelectAbility}
-                disabled={!clickable}
+                disabled={!clickable || abilitiesLocked}
               />
             )}
 
@@ -1011,7 +1060,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                   energy={state.energy[currentPid]}
                   selectedAbility={selectedAbility}
                   onSelect={onSelectAbility}
-                  disabled={!clickable}
+                  disabled={!clickable || abilitiesLocked}
                   compact
                 />
               </div>

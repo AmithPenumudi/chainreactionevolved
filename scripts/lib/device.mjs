@@ -119,5 +119,27 @@ export async function connect({ adb, port = 9222 } = {}) {
     return true;
   };
 
-  return { evaluate, tap, exceptions, close: () => ws.close() };
+  /**
+   * Taps viewport coordinates directly, scrolling nothing.
+   *
+   * `tap` centres its target first, which is what you want for driving the app but ruins any
+   * measurement of scrolling — it moves the page before every tap. Use this when the scroll
+   * position is the thing under test.
+   */
+  const tapAt = async (x, y) => {
+    await send("Input.synthesizeTapGesture", { x, y, gestureSourceType: "touch" });
+  };
+
+  /** Taps an element where it currently sits, or returns false if it is not on screen. */
+  const tapWhereItIs = async (findExpression) => {
+    const rect = await evaluate(`(()=>{const el=(${findExpression});if(!el)return null;
+      const r=el.getBoundingClientRect();
+      if(r.top<0||r.bottom>innerHeight||r.left<0||r.right>innerWidth)return null;
+      return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+    if (!rect) return false;
+    await tapAt(rect.x, rect.y);
+    return true;
+  };
+
+  return { evaluate, tap, tapAt, tapWhereItIs, exceptions, close: () => ws.close() };
 }

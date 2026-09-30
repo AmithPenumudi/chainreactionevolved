@@ -749,7 +749,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
           <div
             className={`order-1 relative flex land:order-1 land:col-start-1 land:row-span-2 land:row-start-1 lg:order-2 ${
               zoomed && canZoom
-                ? "max-h-[75vh] justify-start overflow-auto rounded-md"
+                ? // overscroll-contain keeps a pan of the zoomed board from chaining into the
+                  // page once it hits an edge, which otherwise scrolls the whole screen away
+                  // mid-move.
+                  "max-h-[75vh] justify-start overflow-auto overscroll-contain rounded-md"
                 : "items-center justify-center"
             }`}
             data-testid="board-frame"

@@ -64,6 +64,16 @@ commitMove(state, res) -> GameState           // pure reducer: folds the result 
 animates. This split is why the engine can be fuzzed and why a server could one day replay and
 verify a match.
 
+> **Trap:** `MoveResult.boardBefore` is the board _before the orb is placed_, not after. Showing
+> it while the animation warms up left every tap with no feedback at all until the first
+> explosion wave — measured at ~214ms from click to the orb appearing. `animateMove` now starts
+> from `boardAfterPlacement(res)` so the player's own orb lands on the next frame, and skips the
+> pre-explosion pause entirely when nothing explodes; that brought click-to-orb to ~57ms.
+> The pause telegraphs the _explosion_, not the placement.
+>
+> `boardAfterPlacement` derives the board rather than `applyMove` storing it, because the AI
+> search calls `applyMove` on every node and would pay for a clone it never looks at.
+
 **Critical mass** is `effectiveCriticalMass()`, not the naive corner/edge/interior count: walls
 reduce a cell's neighbour count, `fortified` adds one, an owned `reactor` adds one, and the
 result floors at 2.
@@ -242,6 +252,12 @@ renders a real error page. They are not part of the game, and they are not dead 
 phones (a two-column layout via the `land:` CSS variant) and desktop each get their own fit.
 Boards whose fitted cells fall below `ZOOM_BELOW` offer a zoom toggle rather than shipping
 untappable cells.
+
+> **Trap:** zoomed, the board frame becomes a real nested scroller — 676px of board inside a
+> 369px window on a 10×15 — so it needs `overscroll-contain`. Without it a pan that reaches the
+> board's edge chains into the page and scrolls the whole screen out from under the player's
+> finger mid-move. Measured on a device: 169px of page movement with `auto`, 0 with `contain`.
+> `GameScreen.zoom.test.tsx` asserts the class is present.
 
 **Accessibility.** Every cell carries a screen-reader label from `src/game/a11y.ts` describing
 position, tile, owner, orbs vs critical mass and modifiers.

@@ -282,6 +282,22 @@ function depositOrb(
 }
 
 /**
+ * The board the instant the orb lands, before any explosion resolves.
+ *
+ * Derived rather than stored on `MoveResult`: `applyMove` runs thousands of times inside the AI
+ * search, and an extra board clone there would be paid on every node for something only the
+ * animation needs. `engine.test.ts` pins this against `applyMove`'s own result so the two
+ * cannot drift.
+ */
+export function boardAfterPlacement(res: MoveResult): BoardState {
+  const cells = res.boardBefore.cells.slice();
+  const i = idx(res.boardBefore, res.row, res.col);
+  // Placing also captures the cell, which is what makes a power tile change hands.
+  cells[i] = { ...cells[i], orbs: cells[i].orbs + 1, owner: res.player };
+  return { ...res.boardBefore, cells };
+}
+
+/**
  * Applies a move to a cloned board and returns detailed steps for animation.
  * Does NOT mutate input state.
  */

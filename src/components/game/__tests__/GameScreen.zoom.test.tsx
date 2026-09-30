@@ -88,6 +88,10 @@ describe("board zoom on phones", () => {
     expect(firstCellWidth()).toBeGreaterThan(fitted);
     const frame = host.querySelector("[data-testid='board-frame']") as HTMLElement;
     expect(frame.className).toContain("overflow-auto");
+    // Without this the pan chains into the page the moment the board reaches an edge, and the
+    // screen scrolls out from under the player's finger mid-move. Measured on a device: a pan
+    // at the edge moved the page 169px with `auto`, and 0px with `contain`.
+    expect(frame.className).toContain("overscroll-contain");
     expect(zoomBtn()!.getAttribute("aria-pressed")).toBe("true");
 
     await act(async () => zoomBtn()!.click());

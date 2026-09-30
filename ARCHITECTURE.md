@@ -243,6 +243,12 @@ phones (a two-column layout via the `land:` CSS variant) and desktop each get th
 Boards whose fitted cells fall below `ZOOM_BELOW` offer a zoom toggle rather than shipping
 untappable cells.
 
+> **Trap:** zoomed, the board frame becomes a real nested scroller — 676px of board inside a
+> 369px window on a 10×15 — so it needs `overscroll-contain`. Without it a pan that reaches the
+> board's edge chains into the page and scrolls the whole screen out from under the player's
+> finger mid-move. Measured on a device: 169px of page movement with `auto`, 0 with `contain`.
+> `GameScreen.zoom.test.tsx` asserts the class is present.
+
 **Accessibility.** Every cell carries a screen-reader label from `src/game/a11y.ts` describing
 position, tile, owner, orbs vs critical mass and modifiers.
 

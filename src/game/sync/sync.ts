@@ -47,10 +47,19 @@ export function readLocal(): PlayerData {
   return { profile: loadProfile(), puzzles: loadPuzzleProgress(), challenges: loadChallenges() };
 }
 
+/**
+ * Announced after a sync replaces what is on the device, so the providers — which read local
+ * storage once on mount — pick the merged copy up without a restart.
+ */
+export const SYNC_APPLIED_EVENT = "cr-sync-applied";
+
 export function writeLocal(data: PlayerData): void {
   saveProfile(data.profile);
   savePuzzleProgress(data.puzzles);
   saveChallenges(data.challenges);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SYNC_APPLIED_EVENT));
+  }
 }
 
 /** Merges the two sides. Pure, so the interesting half of sync is tested without a backend. */

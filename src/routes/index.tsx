@@ -15,6 +15,7 @@ import { PuzzleGame } from "@/components/game/PuzzleGame";
 import { PUZZLE_ORDER, type PuzzleDef } from "@/game/puzzles";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { installCrashHandlers } from "@/lib/crash-log";
+import { syncIfSignedIn } from "@/game/sync/sync";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,6 +52,11 @@ type View =
 
 function Index() {
   useEffect(() => installCrashHandlers(), []);
+  // Pull anything newer from the cloud in the background. Never gates the first render, and
+  // never creates an account — a player who has not finished a match has nothing to restore.
+  useEffect(() => {
+    void syncIfSignedIn();
+  }, []);
   return (
     <ErrorBoundary>
       <SettingsProvider>

@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { SYNC_APPLIED_EVENT } from "@/game/sync/sync";
 import {
   DEFAULT_PROFILE,
   MatchOutcome,
@@ -12,9 +13,13 @@ import {
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
 
-  // Load after mount so SSR markup and first client render match.
+  // Load after mount so SSR markup and first client render match, and again whenever a cloud
+  // sync has merged a newer copy into storage.
   useEffect(() => {
-    setProfile(loadProfile());
+    const load = () => setProfile(loadProfile());
+    load();
+    window.addEventListener(SYNC_APPLIED_EVENT, load);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, load);
   }, []);
 
   const commit = useCallback((fn: (p: PlayerProfile) => PlayerProfile) => {

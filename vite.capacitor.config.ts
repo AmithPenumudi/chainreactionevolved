@@ -13,6 +13,9 @@ const rootTsconfig = fileURLToPath(new URL("./tsconfig.json", import.meta.url));
 
 export default defineConfig({
   root: "capacitor-src",
+  // .env lives at the project root, but envDir defaults to `root` — without this the
+  // VITE_SUPABASE_* values are silently absent from the Android bundle and sync no-ops.
+  envDir: fileURLToPath(new URL(".", import.meta.url)),
   plugins: [tsConfigPaths({ projects: [rootTsconfig] }), tailwindcss(), viteReact()],
   // The AI search runs in a module Web Worker (see src/game/ai-client.ts).
   worker: { format: "es" },

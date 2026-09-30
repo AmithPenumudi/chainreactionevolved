@@ -27,6 +27,7 @@ import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
 import { haptic } from "@/game/haptics";
 import { MAX_UNDOS, UndoHistory, undoAllowed } from "@/game/undo";
+import { syncAfterMatch } from "@/game/sync/sync";
 import {
   BOARD_PADDING,
   CELL_GAP,
@@ -272,6 +273,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     };
     recordMatch(outcome);
     recordOutcome(outcome);
+    // First thing worth keeping, so this is where the anonymous account gets created — not at
+    // launch, where someone who opens the app once would cost a monthly active user. Deliberately
+    // not awaited: the result screen must never wait on the network.
+    void syncAfterMatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.winner, state.draw]);
 

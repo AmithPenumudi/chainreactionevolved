@@ -51,6 +51,20 @@ function mergeRecent(a: MatchRecord[], b: MatchRecord[]): MatchRecord[] {
     .slice(0, MAX_RECENT);
 }
 
+const lastPlayed = (p: PlayerProfile) => p.recent[0]?.at ?? 0;
+
+/**
+ * The streak from whichever side played most recently. When neither has (or both landed in the
+ * same millisecond) it takes the larger, which keeps the merge commutative and errs in the
+ * player's favour rather than silently ending a streak they still hold.
+ */
+function freshestStreak(a: PlayerProfile, b: PlayerProfile): number {
+  const byTime = lastPlayed(a) - lastPlayed(b);
+  if (byTime > 0) return a.currentStreak;
+  if (byTime < 0) return b.currentStreak;
+  return Math.max(a.currentStreak, b.currentStreak);
+}
+
 export function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfile {
   // The side edited more recently owns the display fields; a tie keeps what this device shows.
   const localIsNewer = (local.updatedAt ?? 0) >= (remote.updatedAt ?? 0);
@@ -61,8 +75,11 @@ export function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): Play
     avatarId: identity.avatarId,
     updatedAt: larger(local.updatedAt ?? 0, remote.updatedAt ?? 0),
     xp: larger(local.xp, remote.xp),
-    // A streak resets on a loss, so it is not monotonic: the newer side is the truthful one.
-    currentStreak: identity.currentStreak,
+    // A streak resets on a loss, so it is not monotonic and max() would be wrong: the device
+    // that played most recently holds the truthful value. `updatedAt` cannot answer this —
+    // it only moves when the name or avatar changes, so it is tied on almost every sync and
+    // the two devices would disagree forever. The last match's timestamp is the real signal.
+    currentStreak: freshestStreak(local, remote),
     longestStreak: larger(local.longestStreak, remote.longestStreak),
     bestMatchEliminations: larger(local.bestMatchEliminations, remote.bestMatchEliminations),
     stats: Object.fromEntries(

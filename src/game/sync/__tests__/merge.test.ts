@@ -107,12 +107,25 @@ describe("mergeProfiles", () => {
     }
   });
 
-  it("takes the current streak from the newer side, since a streak can legitimately drop", () => {
-    const stale = { ...played(5), currentStreak: 5, updatedAt: 1_000 };
-    const fresh = { ...played(1), currentStreak: 0, updatedAt: 2_000 };
-    const m = mergeProfiles(fresh, stale);
-    expect(m.currentStreak).toBe(0);
-    expect(m.longestStreak).toBe(Math.max(stale.longestStreak, fresh.longestStreak));
+  it("takes the current streak from whichever device played most recently", () => {
+    // A streak drops to zero on a loss, so the most recent play is the truthful one — not the
+    // larger number, and not whoever last renamed themselves.
+    const at = (p: PlayerProfile, t: number) => ({
+      ...p,
+      recent: p.recent.map((r, i) => ({ ...r, at: t - i })),
+    });
+    const stale = at({ ...played(5), currentStreak: 5 }, 1_000);
+    const fresh = at({ ...played(1), currentStreak: 0 }, 2_000);
+    for (const m of [mergeProfiles(fresh, stale), mergeProfiles(stale, fresh)]) {
+      expect(m.currentStreak).toBe(0);
+      expect(m.longestStreak).toBe(Math.max(stale.longestStreak, fresh.longestStreak));
+    }
+  });
+
+  it("with no matches on either side, the streak merge stays commutative", () => {
+    const a = { ...DEFAULT_PROFILE, currentStreak: 3 };
+    const b = { ...DEFAULT_PROFILE, currentStreak: 6 };
+    expect(mergeProfiles(a, b).currentStreak).toBe(mergeProfiles(b, a).currentStreak);
   });
 
   it("keeps the five newest recent matches across both devices, without duplicates", () => {

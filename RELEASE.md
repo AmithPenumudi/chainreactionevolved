@@ -149,13 +149,14 @@ so the two cannot disagree.
 
 Deploy the web build and use `https://<your-domain>/privacy`.
 
-> **The mailbox must exist before you deploy.** The policy publishes
+> **The contact address must be a mailbox that is actually read.** The policy publishes
 > `chainreactionevolved@gmail.com` (set in `src/content/privacy.ts`) as the deletion-request
-> route, on a public page and inside the app. Play requires that route to work, so register the
-> account first — and if the name turns out to be taken, change the constant to whatever you
-> did register. It is deliberately a project address rather than a personal one: a contact line
-> on a public page gets scraped, and player mail is easier to deal with away from a personal
-> inbox.
+> route, on a public page and inside the app, and Play requires that route to work. It is
+> deliberately a project address rather than a personal one: a contact line on a public page
+> gets scraped, and player mail is easier to deal with away from a personal inbox.
+>
+> The account exists. If it is ever replaced, change that one constant — the web page and the
+> in-app screen both render from it.
 
 ---
 

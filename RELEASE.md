@@ -149,9 +149,13 @@ so the two cannot disagree.
 
 Deploy the web build and use `https://<your-domain>/privacy`.
 
-> **The policy publishes a contact address**, currently the one in `src/content/privacy.ts`.
-> Play needs a working deletion-request route, but the address goes on a public page — change it
-> to whatever you are happy publishing before you deploy.
+> **The mailbox must exist before you deploy.** The policy publishes
+> `chainreactionevolved@gmail.com` (set in `src/content/privacy.ts`) as the deletion-request
+> route, on a public page and inside the app. Play requires that route to work, so register the
+> account first — and if the name turns out to be taken, change the constant to whatever you
+> did register. It is deliberately a project address rather than a personal one: a contact line
+> on a public page gets scraped, and player mail is easier to deal with away from a personal
+> inbox.
 
 ---
 
@@ -185,4 +189,5 @@ Plan for: internal testing → closed testing (the 14 days) → production.
       `adb install -r` the universal APK from `bundletool`, or push the AAB to an internal track
       and install it from Play.
 - [ ] Privacy policy deployed and the URL reachable in a private window
+- [ ] The contact mailbox in the policy exists, and a test message to it arrives
 - [ ] `ARCHITECTURE.md` updated if anything about the system changed

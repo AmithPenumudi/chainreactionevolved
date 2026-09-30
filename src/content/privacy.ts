@@ -14,7 +14,13 @@
 
 export const PRIVACY_LAST_UPDATED = "30 September 2026";
 
-export const PRIVACY_CONTACT = "amith.penumudi494@gmail.com";
+/**
+ * Where deletion requests go. Play requires a route that actually works, and this address is
+ * published on the public /privacy page and shown inside the app — so it is a project address
+ * rather than a personal one, keeping player mail and address-scraper spam out of a personal
+ * inbox.
+ */
+export const PRIVACY_CONTACT = "chainreactionevolved@gmail.com";
 
 export interface PolicySection {
   heading: string;

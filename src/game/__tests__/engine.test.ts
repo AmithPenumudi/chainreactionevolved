@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyMove,
   applyShrink,
+  boardAfterPlacement,
   canPlace,
   cellsOwnedBy,
   commitMove,
@@ -334,5 +335,53 @@ describe("cellsOwnedBy", () => {
     b.cells[2].owner = 1;
     expect(cellsOwnedBy(b, 0)).toBe(2);
     expect(cellsOwnedBy(b, 1)).toBe(1);
+  });
+});
+
+describe("boardAfterPlacement", () => {
+  it("matches applyMove exactly when nothing explodes", () => {
+    // The strong case: with no explosions, the board right after placement IS the final board,
+    // so the derived helper can be pinned against the engine's own output. If placement ever
+    // grows a rule the helper does not know about, this fails.
+    const state = classicState(6, 9);
+    const res = applyMove(state, 2, 3)!;
+    expect(res.steps).toHaveLength(0);
+    expect(boardAfterPlacement(res)).toEqual(res.boardAfter);
+  });
+
+  it("claims an empty cell for the mover, leaving the rest of the board untouched", () => {
+    const state = classicState(6, 9);
+    const res = applyMove(state, 2, 3)!;
+    const placed = boardAfterPlacement(res);
+    const before = res.boardBefore;
+    const at = (b: typeof placed, r: number, c: number) => b.cells[r * b.cols + c];
+
+    expect(at(before, 2, 3).owner).toBeNull();
+    expect(at(placed, 2, 3).owner).toBe(0);
+    expect(at(placed, 2, 3).orbs).toBe(1);
+
+    for (let i = 0; i < placed.cells.length; i++) {
+      if (i === 2 * placed.cols + 3) continue;
+      expect(placed.cells[i]).toEqual(before.cells[i]);
+    }
+    // The input board is not mutated.
+    expect(at(res.boardBefore, 2, 3).owner).toBeNull();
+  });
+
+  it("stacks a second orb on a cell the mover already owns", () => {
+    // A player may only ever place on an empty cell or one of their own, so this is the other
+    // half of what placement can do.
+    let state = classicState(6, 9);
+    state = commitMove(state, applyMove(state, 2, 3)!); // P1
+    state = commitMove(state, applyMove(state, 4, 5)!); // P2
+
+    expect(applyMove(state, 4, 5)).toBeNull(); // P1 cannot take P2's cell by placing
+
+    const res = applyMove(state, 2, 3)!; // ...but can stack on its own
+    const placed = boardAfterPlacement(res);
+    const at = (b: typeof placed, r: number, c: number) => b.cells[r * b.cols + c];
+    expect(at(placed, 2, 3).owner).toBe(0);
+    expect(at(placed, 2, 3).orbs).toBe(2);
+    expect(placed).toEqual(res.boardAfter); // 2 of 3 on an interior cell: no explosion yet
   });
 });

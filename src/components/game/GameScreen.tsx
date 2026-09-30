@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyMove,
+  boardAfterPlacement,
   applyShrink,
   canPlace,
   cellsOwnedBy,
@@ -428,12 +429,17 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     setAnim((a) => ({
       ...a,
       running: true,
-      displayBoard: res.boardBefore,
+      // The player's own orb appears on the next frame. Showing `boardBefore` here instead left
+      // every tap with no feedback at all for the length of the pause below — measured at ~155ms
+      // on a device, and identical on a 6x9 and a 10x15, which is what gave it away as a timer
+      // rather than render cost. The pause is there to telegraph the explosion, not the placement.
+      displayBoard: boardAfterPlacement(res),
       explodingKeys: new Set(),
       flying: [],
     }));
 
-    await sleep(Math.round(140 * sf));
+    // Nothing to telegraph when nothing explodes, so a simple placement resolves immediately.
+    if (res.steps.length > 0) await sleep(Math.round(140 * sf));
 
     let chain = 0;
     for (let i = 0; i < res.steps.length; i++) {

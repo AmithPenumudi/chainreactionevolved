@@ -64,6 +64,16 @@ commitMove(state, res) -> GameState           // pure reducer: folds the result 
 animates. This split is why the engine can be fuzzed and why a server could one day replay and
 verify a match.
 
+> **Trap:** `MoveResult.boardBefore` is the board _before the orb is placed_, not after. Showing
+> it while the animation warms up left every tap with no feedback at all until the first
+> explosion wave — measured at ~214ms from click to the orb appearing. `animateMove` now starts
+> from `boardAfterPlacement(res)` so the player's own orb lands on the next frame, and skips the
+> pre-explosion pause entirely when nothing explodes; that brought click-to-orb to ~57ms.
+> The pause telegraphs the _explosion_, not the placement.
+>
+> `boardAfterPlacement` derives the board rather than `applyMove` storing it, because the AI
+> search calls `applyMove` on every node and would pay for a clone it never looks at.
+
 **Critical mass** is `effectiveCriticalMass()`, not the naive corner/edge/interior count: walls
 reduce a cell's neighbour count, `fortified` adds one, an owned `reactor` adds one, and the
 result floors at 2.

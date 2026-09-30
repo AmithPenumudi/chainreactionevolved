@@ -7,10 +7,15 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+
+const TITLE = "Chain Reaction: Evolved — Grid Strategy Game";
+const DESCRIPTION =
+  "A fast-paced strategy game where every move can trigger an explosive chain reaction. " +
+  "Place orbs, capture opponents, and take control of the board.";
+const OG_IMAGE = "/og-image.png";
 
 function NotFoundComponent() {
   return (
@@ -37,9 +42,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -77,38 +79,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Chain Reaction: Evolved — Grid Strategy Game" },
-      {
-        name: "description",
-        content:
-          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
-      },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Chain Reaction: Evolved — Grid Strategy Game" },
-      {
-        property: "og:description",
-        content:
-          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
-      },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
+      // Served from public/ — never a third-party CDN, whose URLs rot silently and
+      // leak where the project was built.
+      { property: "og:image", content: OG_IMAGE },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "Chain Reaction: Evolved — Grid Strategy Game" },
-      {
-        name: "twitter:description",
-        content:
-          "Chain Reaction is a fast-paced multiplayer strategy game where every move can trigger an explosive chain reaction. Place orbs, capture opponents, and take contr",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/37bae623-62eb-456a-829a-5ea38b457444/id-preview-c631d3e8--dbfb44f2-1619-4478-b75d-63478bf03e61.lovable.app-1785343480936.png",
-      },
+      { name: "twitter:title", content: TITLE },
+      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE },
     ],
     // Inter is bundled via @font-face in styles.css, so no third-party font requests are needed.
     links: [{ rel: "stylesheet", href: appCss }],

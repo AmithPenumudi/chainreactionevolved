@@ -1,45 +1,47 @@
-# Welcome to your Lovable project
+# Chain Reaction: Evolved
 
-This project was built with [Lovable](https://lovable.dev).
+A turn-based grid strategy game. Place orbs on a board; when a cell exceeds its capacity it
+explodes into its neighbours, capturing them and often setting off a chain. Last player with
+orbs on the board wins.
 
-## Build with Lovable
+Android is the primary target — a Capacitor shell around a static client build. The same `src/`
+also builds for the web as a Cloudflare Worker.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+**Three modes:** Classic, Abilities (energy and castable powers), and Arena (special tiles).
+Plus 30 hand-built puzzles, daily challenges, and offline bot opponents.
 
 ## Documentation
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — how the codebase fits together, the decisions behind
-  it, and the traps worth knowing before changing things.
+  it, and the traps worth knowing before changing things. Read this first.
 - **[TESTING.md](TESTING.md)** — the test layers, and the device smoke test.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requires Node.js 24+ and npm.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
 
-## Built with
+The dev server runs on port 8080.
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+### Commands
+
+| Command                   | What it does                               |
+| ------------------------- | ------------------------------------------ |
+| `npm run dev`             | Dev server (web)                           |
+| `npm run build`           | Web build for Cloudflare Workers           |
+| `npm run build:capacitor` | Static client bundle for Android           |
+| `npm test`                | Full test suite                            |
+| `npm run lint`            | ESLint                                     |
+| `npm run test:android`    | Smoke test against a running device        |
+| `npm run dashboard`       | Internal metrics (`-- --demo` for samples) |
 
 ## Android
 
-The Android app is a Capacitor shell around a static client build. See `TESTING.md`
-for the full checklist.
-
-```
+```sh
 npm run build:capacitor
 npx cap sync android
 cd android && ./gradlew assembleDebug
@@ -49,3 +51,7 @@ cd android && ./gradlew assembleDebug
   pointing at JDK 21. `gradlew.bat` does not work from Git Bash.
 - **Old devices:** the UI needs a WebView of Chrome 111+ (`oklch()` / `color-mix()`). The app
   shows an "update Android System WebView" screen instead of a blank page when it is older.
+
+## Built with
+
+TanStack Start · React 19 · TypeScript · Tailwind CSS · Capacitor · Supabase · Vite

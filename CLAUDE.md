@@ -19,8 +19,11 @@ for web as a Cloudflare Worker.
 - **Never use CSS relative colour syntax** (`oklch(from ...)`). Android WebViews are often older
   than Chrome 119. Use `lighten` / `darken` / `withAlpha` from `src/game/colors.ts`. When this
   broke, every orb rendered black while every test still passed.
-- **Never force-push or amend pushed commits.** The repo syncs to Lovable and rewriting history
-  loses their project history (see `AGENTS.md`).
+- **Never force-push or amend pushed commits.** The repo is public with open pull requests;
+  rewriting pushed history breaks review threads and anyone's checkout.
+- **No third-party branding or credits** anywhere in the codebase, docs, commit messages or
+  metadata — no build-tool attribution, no co-author trailers, no vendor marketing. This is the
+  owner's project and it carries only their name.
 - **Verify against a build or a device, not just the suite.** The credentials-missing bug and the
   black-orb bug both passed every unit test. `npm run test:android` drives the real app.
 

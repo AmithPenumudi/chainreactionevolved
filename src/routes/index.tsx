@@ -4,6 +4,7 @@ import { HomeScreen } from "@/components/game/HomeScreen";
 import { SetupScreen, MatchConfig } from "@/components/game/SetupScreen";
 import { GameScreen } from "@/components/game/GameScreen";
 import { SettingsScreen } from "@/components/game/SettingsScreen";
+import { PrivacyScreen } from "@/components/game/PrivacyScreen";
 import { SettingsProvider } from "@/components/game/SettingsProvider";
 import { ProfileProvider } from "@/components/game/ProfileProvider";
 import { ProfileScreen } from "@/components/game/ProfileScreen";
@@ -43,6 +44,7 @@ type View =
   | { kind: "home" }
   | { kind: "setup" }
   | { kind: "settings" }
+  | { kind: "privacy" }
   | { kind: "profile" }
   | { kind: "howto" }
   | { kind: "challenges" }
@@ -166,7 +168,15 @@ function Screens() {
     return <ProfileScreen onBack={() => setView({ kind: "home" })} />;
   }
   if (view.kind === "settings") {
-    return <SettingsScreen onBack={() => setView({ kind: "home" })} />;
+    return (
+      <SettingsScreen
+        onBack={() => setView({ kind: "home" })}
+        onPrivacy={() => setView({ kind: "privacy" })}
+      />
+    );
+  }
+  if (view.kind === "privacy") {
+    return <PrivacyScreen onBack={() => setView({ kind: "settings" })} />;
   }
   if (view.kind === "setup") {
     return (

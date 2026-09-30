@@ -2,6 +2,8 @@
  * A small on-device error log. It lets a player (or you, on a test device) see what went wrong
  * and copy it into a bug report, without needing a server.
  */
+import { APP_VERSION } from "./version";
+
 export interface CrashEntry {
   at: number;
   message: string;
@@ -97,6 +99,7 @@ export function formatDebugInfo(): string {
   const crashes = getCrashLog();
   const lines = [
     "Chain Reaction — debug info",
+    `version: ${APP_VERSION}`,
     `time: ${new Date().toISOString()}`,
     `userAgent: ${navigator.userAgent}`,
     `viewport: ${window.innerWidth}x${window.innerHeight} @${window.devicePixelRatio}x`,

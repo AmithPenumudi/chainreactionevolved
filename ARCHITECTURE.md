@@ -263,6 +263,11 @@ npm run build            # web / Cloudflare
 npm run build:capacitor  # Android web assets
 npm run test:android     # drive the real app on a device (see TESTING.md)
 npm run dashboard        # internal metrics dashboard
+npm run release:bump     # raise versionCode / versionName before a Play upload
+npm run release:android  # signed .aab for Play, signature verified (see RELEASE.md)
+npm run store-assets     # Play icon + feature graphic
+npm run store-screenshots # screenshots captured from the running app
+npm run og-image         # social preview card
 ```
 
 Android build (run Gradle from **PowerShell** on Windows; `gradlew.bat` fails under Git Bash):
@@ -281,6 +286,31 @@ Plugin order in the web config matters: Tailwind and path resolution, then `tans
 generates the route tree), then nitro on `build` only, then `viteReact` last. The config also
 defines `import.meta.env.VITE_*` explicitly — Vite exposes those to the client automatically, but
 the nitro server bundle is built separately and does not inherit them.
+
+**Versioning.** `versionName` comes from `package.json`'s `version` — read by `android/app/
+build.gradle` with a JSON slurper, and injected into both Vite builds as `__APP_VERSION__` (see
+`src/lib/version.ts`), so the store listing, the APK and the version shown in Settings cannot
+disagree. `versionCode` is a separate monotonic integer in `android/version.properties`, because
+Play needs one and semver cannot provide it. `npm run release:bump` moves both;
+`release-wiring.test.ts` fails if either is ever hardcoded back into the gradle file.
+
+**Releasing.** `npm run release:android` builds the signed App Bundle and verifies the signature
+before reporting success — an unsigned bundle builds happily and is only rejected in the Console,
+after a `versionCode` has been spent. `RELEASE.md` holds the full checklist, the Data safety
+answers and the listing copy. Store artwork is generated: `npm run store-assets` composites the
+icon from the launcher icon the app actually ships, and `npm run store-screenshots` drives the
+real app on a device. Both go to `store/`.
+
+> **Trap:** the screenshot script navigates with the app's own back control, never the hardware
+> Back key. One press too many on Home leaves the app, which tears down the WebView and silently
+> kills the DevTools connection — the script then exits 0 having captured half its screenshots.
+
+**Privacy policy.** `src/content/privacy.ts` is the single source, rendered by both the `/privacy`
+web route (the public URL Play requires) and `PrivacyScreen` in-app (Settings → Support), because
+the app is offline-first and an outbound link would be a dead end on a plane. It must describe
+what the code actually does: `release-wiring.test.ts` asserts the sync layer only ever writes
+`player_data` and that launch never creates an account, so a new network call fails the suite
+rather than quietly making the policy false.
 
 **Dependency overrides.** `package.json` pins `uuid` to `^11.1.1` inside `xcode`, which
 `@capacitor/cli` depends on. `xcode` asks for `uuid@^7`, which has an unpatched bounds-check

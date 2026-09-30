@@ -4,6 +4,7 @@
 // Plugin order matters: tailwind and path resolution first, then tanstackStart
 // (which generates the route tree), then nitro, and viteReact last.
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { defineConfig, loadEnv, type PluginOption } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -42,7 +43,12 @@ export default defineConfig(async ({ command, mode }) => {
   // built separately and does not inherit that. Defining them explicitly keeps the
   // Supabase credentials present on both sides. (The Android bundle solves the same
   // problem with `envDir` — see vite.capacitor.config.ts.)
-  const define: Record<string, string> = {};
+  const define: Record<string, string> = {
+    // Matches the Android versionName — see vite.capacitor.config.ts.
+    __APP_VERSION__: JSON.stringify(
+      JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version,
+    ),
+  };
   for (const [key, value] of Object.entries(loadEnv(mode, process.cwd(), "VITE_"))) {
     define[`import.meta.env.${key}`] = JSON.stringify(value);
   }

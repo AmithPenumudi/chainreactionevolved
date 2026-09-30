@@ -15,6 +15,8 @@ Plus 30 hand-built puzzles, daily challenges, and offline bot opponents.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — how the codebase fits together, the decisions behind
   it, and the traps worth knowing before changing things. Read this first.
 - **[TESTING.md](TESTING.md)** — the test layers, and the device smoke test.
+- **[RELEASE.md](RELEASE.md)** — shipping to Google Play: the signed bundle, store assets,
+  Data safety answers and the pre-upload checklist.
 
 ## Development
 
@@ -38,6 +40,7 @@ The dev server runs on port 8080.
 | `npm run lint`            | ESLint                                     |
 | `npm run test:android`    | Smoke test against a running device        |
 | `npm run dashboard`       | Internal metrics (`-- --demo` for samples) |
+| `npm run release:android` | Signed `.aab` for Play (see RELEASE.md)    |
 
 ## Android
 

@@ -11,15 +11,20 @@ import {
   saveChallenges,
 } from "@/game/challenges";
 import type { MatchOutcome } from "@/game/profile";
+import { SYNC_APPLIED_EVENT } from "@/game/sync/sync";
 import { useProfile } from "@/game/profile";
 
 export function ChallengeProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ChallengeState>(() => freshState(0));
   const { addXp } = useProfile();
 
-  // Load after mount so SSR markup and first client render match.
+  // Load after mount so SSR markup and first client render match, and again whenever a cloud
+  // sync has merged a newer copy into storage.
   useEffect(() => {
-    setState(loadChallenges());
+    const load = () => setState(loadChallenges());
+    load();
+    window.addEventListener(SYNC_APPLIED_EVENT, load);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, load);
   }, []);
 
   const commit = useCallback((fn: (s: ChallengeState) => ChallengeState) => {

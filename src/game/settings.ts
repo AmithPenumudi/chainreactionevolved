@@ -13,6 +13,8 @@ export interface GameSettings {
   musicVolume: number; // 0..100
   orbMotion: boolean;
   reducedMotion: boolean;
+  /** Short vibrations on placing / exploding / winning (devices that support it). */
+  haptics: boolean;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 40,
   orbMotion: true,
   reducedMotion: false,
+  haptics: true,
 };
 
 const STORAGE_KEY = "cr-settings-v1";
@@ -54,6 +57,7 @@ export function sanitizeSettings(raw: unknown): GameSettings {
     musicVolume: vol("musicVolume"),
     orbMotion: bool("orbMotion"),
     reducedMotion: bool("reducedMotion"),
+    haptics: bool("haptics"),
   };
 }
 

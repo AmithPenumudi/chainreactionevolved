@@ -1,6 +1,7 @@
 import { Cell } from "@/game/engine";
 import { Orb } from "./Orb";
 import { colorFor } from "@/game/colors";
+import { cellLabel } from "@/game/a11y";
 
 interface Props {
   cell: Cell;
@@ -81,7 +82,13 @@ export function CellView({
         background: bg,
         boxShadow: ringStyle,
       }}
-      aria-label={`cell ${row},${col}${cell.tile ? ` ${cell.tile}` : ""}`}
+      aria-label={cellLabel(
+        cell,
+        row,
+        col,
+        cm,
+        cell.owner !== null ? playerColorIndex(cell.owner) : undefined,
+      )}
     >
       {/* Tile glyphs (behind orbs) */}
       <TileGlyph tile={cell.tile} portalPairId={cell.portalPairId} size={cellSize} />

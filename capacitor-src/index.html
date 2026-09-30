@@ -4,15 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Chain Reaction: Evolved</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700;900&display=swap"
-    />
+    <!-- Inter is bundled (see @font-face in src/styles.css): no network font requests. -->
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      Compatibility guard. Written in plain ES5 on purpose: on a WebView too old to parse the app
+      bundle (Chrome < 111) none of the app's own code can run, so this is the only thing that can
+      explain the blank screen. Keep the message in sync with src/lib/compat.ts.
+    -->
+    <script>
+      (function () {
+        var ok = false;
+        try {
+          ok =
+            !!(window.CSS && CSS.supports) &&
+            CSS.supports("color", "oklch(0.6 0.1 200)") &&
+            CSS.supports("color", "color-mix(in oklab, red 50%, blue)");
+          // syntax the bundle uses: optional chaining / nullish coalescing
+          new Function("var a = null; return a?.b ?? 1;");
+        } catch (e) {
+          ok = false;
+        }
+        window.__crSupported = ok;
+        if (ok) return;
+        var root = document.getElementById("root");
+        document.body.style.margin = "0";
+        document.body.style.background = "#0b0d12";
+        root.innerHTML =
+          '<div role="alert" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:#0b0d12;color:#e8ecf3;font-family:sans-serif">' +
+          '<h1 style="font-size:22px;margin:0 0 12px">Update needed</h1>' +
+          '<p style="max-width:420px;line-height:1.5;margin:0;color:#aab3c5">Chain Reaction needs a newer Android System WebView (Chrome 111 or later) to display correctly. Open Google Play, search for “Android System WebView” and tap Update, then reopen the game.</p>' +
+          "</div>";
+      })();
+    </script>
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>

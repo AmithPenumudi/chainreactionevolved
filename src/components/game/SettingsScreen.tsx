@@ -1,12 +1,15 @@
+import { clearCrashLog, formatDebugInfo, getCrashLog } from "@/lib/crash-log";
 import { useState } from "react";
 import { ChainSpeed, GameSettings, useSettings } from "@/game/settings";
 import { PLAYER_COLOR_NAMES, PLAYER_COLOR_VARS, PLAYER_SYMBOLS } from "@/game/colors";
+import { APP_VERSION } from "@/lib/version";
 
 interface Props {
   onBack: () => void;
+  onPrivacy: () => void;
 }
 
-export function SettingsScreen({ onBack }: Props) {
+export function SettingsScreen({ onBack, onPrivacy }: Props) {
   const { settings, update, reset } = useSettings();
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -68,6 +71,16 @@ export function SettingsScreen({ onBack }: Props) {
           />
         </Section>
 
+        <Section title="FEEL">
+          <ToggleRow
+            label="Haptics"
+            hint="Short vibrations when you place orbs, chains explode and you win. Off with Reduced Motion."
+            k="haptics"
+            settings={settings}
+            update={update}
+          />
+        </Section>
+
         <Section title="AUDIO">
           <ToggleRow label="Master Sound" k="masterSound" settings={settings} update={update} />
           <ToggleRow
@@ -99,6 +112,8 @@ export function SettingsScreen({ onBack }: Props) {
             />
           </Row>
         </Section>
+
+        <SupportSection onPrivacy={onPrivacy} />
 
         <Section title="PLAYER COLORS">
           <p className="pb-3 text-xs text-muted-foreground">
@@ -309,5 +324,79 @@ function VolumeSlider({
       />
       <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">{value}</span>
     </div>
+  );
+}
+
+/** Debug info a player can copy into a bug report (recorded errors stay on this device). */
+function SupportSection({ onPrivacy }: { onPrivacy: () => void }) {
+  const [count, setCount] = useState(() => getCrashLog().length);
+  const [note, setNote] = useState<string | null>(null);
+  const [report, setReport] = useState<string | null>(null);
+
+  const copy = async () => {
+    const text = formatDebugInfo();
+    try {
+      await navigator.clipboard.writeText(text);
+      setNote("Copied to clipboard");
+      setReport(null);
+    } catch {
+      // Clipboard blocked: show the text so it can be selected and copied by hand.
+      setReport(text);
+      setNote("Select the text below and copy it");
+    }
+  };
+
+  return (
+    <Section title="SUPPORT">
+      <Row
+        label="Debug info"
+        hint={`Copies device details and the ${count} recorded error${count === 1 ? "" : "s"} for a bug report.`}
+      >
+        <div className="flex gap-2">
+          <button
+            onClick={copy}
+            className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.2em] hover:bg-white/5"
+          >
+            COPY
+          </button>
+          <button
+            onClick={() => {
+              clearCrashLog();
+              setCount(0);
+              setReport(null);
+              setNote("Cleared");
+            }}
+            disabled={count === 0}
+            className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.2em] hover:bg-white/5 disabled:opacity-40"
+          >
+            CLEAR
+          </button>
+        </div>
+      </Row>
+      {note && (
+        <p role="status" className="pb-2 text-xs text-muted-foreground">
+          {note}
+        </p>
+      )}
+      {report && (
+        <textarea
+          readOnly
+          value={report}
+          rows={8}
+          className="w-full rounded-md border border-white/10 bg-black/30 p-2 text-[10px]"
+        />
+      )}
+      <Row label="Privacy policy" hint="What the game stores, and what it never collects.">
+        <button
+          onClick={onPrivacy}
+          className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.2em] hover:bg-white/5"
+        >
+          READ
+        </button>
+      </Row>
+      <Row label="Version">
+        <span className="text-xs tabular-nums text-muted-foreground">{APP_VERSION}</span>
+      </Row>
+    </Section>
   );
 }

@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { SYNC_APPLIED_EVENT } from "@/game/sync/sync";
 import {
   DEFAULT_PROFILE,
   MatchOutcome,
@@ -12,9 +13,13 @@ import {
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
 
-  // Load after mount so SSR markup and first client render match.
+  // Load after mount so SSR markup and first client render match, and again whenever a cloud
+  // sync has merged a newer copy into storage.
   useEffect(() => {
-    setProfile(loadProfile());
+    const load = () => setProfile(loadProfile());
+    load();
+    window.addEventListener(SYNC_APPLIED_EVENT, load);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, load);
   }, []);
 
   const commit = useCallback((fn: (p: PlayerProfile) => PlayerProfile) => {
@@ -26,10 +31,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setUsername = useCallback(
-    (name: string) => commit((p) => ({ ...p, username: name.slice(0, 16) })),
+    (name: string) => commit((p) => ({ ...p, username: name.slice(0, 16), updatedAt: Date.now() })),
     [commit],
   );
-  const setAvatar = useCallback((id: string) => commit((p) => ({ ...p, avatarId: id })), [commit]);
+  const setAvatar = useCallback(
+    (id: string) => commit((p) => ({ ...p, avatarId: id, updatedAt: Date.now() })),
+    [commit],
+  );
   const recordMatch = useCallback((o: MatchOutcome) => commit((p) => applyMatch(p, o)), [commit]);
   const addXp = useCallback(
     (amount: number) => commit((p) => (amount > 0 ? { ...p, xp: p.xp + Math.floor(amount) } : p)),

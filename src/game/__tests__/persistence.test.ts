@@ -410,6 +410,27 @@ describe("puzzle progress", () => {
     }
   });
 
+  it("solving a later puzzle keeps the earlier ones unlocked (adding puzzles never re-locks anyone)", () => {
+    // A player from before new puzzles existed: solved the first 3, and one far ahead.
+    let progress = {};
+    for (const i of [0, 1, 2, 10]) {
+      progress = applySolve(progress, PUZZLE_ORDER[i], 1, "gold").progress;
+    }
+    // everything up to the far-ahead puzzle stays reachable, including the ones in between
+    for (let i = 0; i <= 11; i++) {
+      expect(isUnlocked(progress, PUZZLE_ORDER[i]), `puzzle #${i}`).toBe(true);
+    }
+    // ...but nothing beyond it opens up
+    expect(isUnlocked(progress, PUZZLE_ORDER[12])).toBe(false);
+  });
+
+  it("the last puzzle is only unlocked after the one before it (or itself later)", () => {
+    const last = PUZZLE_ORDER[PUZZLE_ORDER.length - 1];
+    expect(isUnlocked({}, last)).toBe(false);
+    const prev = PUZZLE_ORDER[PUZZLE_ORDER.length - 2];
+    expect(isUnlocked(applySolve({}, prev, 1, "gold").progress, last)).toBe(true);
+  });
+
   it("improving a medal pays only the XP difference; a worse replay pays nothing and keeps the best", () => {
     const def = PUZZLES[0];
     let r = applySolve({}, def, 3, "bronze");

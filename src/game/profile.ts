@@ -42,6 +42,8 @@ export interface PlayerProfile {
   bestMatchEliminations: number;
   stats: Record<StatsMode, ModeStats>;
   recent: MatchRecord[];
+  /** When username/avatar last changed here — decides which side wins when syncing. */
+  updatedAt?: number;
 }
 
 export const AVATARS: { id: string; glyph: string; label: string; colorVar: string }[] = [
@@ -86,6 +88,7 @@ export const DEFAULT_PROFILE: PlayerProfile = {
   bestMatchEliminations: 0,
   stats: { classic: emptyModeStats(), abilities: emptyModeStats(), arena: emptyModeStats() },
   recent: [],
+  updatedAt: 0,
 };
 
 const STORAGE_KEY = "cr-profile-v1";
@@ -161,6 +164,7 @@ export function sanitizeProfile(raw: unknown): PlayerProfile {
       arena: sanitizeModeStats(stats.arena),
     },
     recent: sanitizeRecent(p.recent),
+    updatedAt: typeof p.updatedAt === "number" && Number.isFinite(p.updatedAt) ? p.updatedAt : 0,
   };
 }
 

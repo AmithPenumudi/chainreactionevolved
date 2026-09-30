@@ -4,6 +4,7 @@ import { HomeScreen } from "@/components/game/HomeScreen";
 import { SetupScreen, MatchConfig } from "@/components/game/SetupScreen";
 import { GameScreen } from "@/components/game/GameScreen";
 import { SettingsScreen } from "@/components/game/SettingsScreen";
+import { PrivacyScreen } from "@/components/game/PrivacyScreen";
 import { SettingsProvider } from "@/components/game/SettingsProvider";
 import { ProfileProvider } from "@/components/game/ProfileProvider";
 import { ProfileScreen } from "@/components/game/ProfileScreen";
@@ -13,6 +14,9 @@ import { ChallengesScreen } from "@/components/game/ChallengesScreen";
 import { PuzzlesScreen } from "@/components/game/PuzzlesScreen";
 import { PuzzleGame } from "@/components/game/PuzzleGame";
 import { PUZZLE_ORDER, type PuzzleDef } from "@/game/puzzles";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { installCrashHandlers } from "@/lib/crash-log";
+import { syncIfSignedIn } from "@/game/sync/sync";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,6 +44,7 @@ type View =
   | { kind: "home" }
   | { kind: "setup" }
   | { kind: "settings" }
+  | { kind: "privacy" }
   | { kind: "profile" }
   | { kind: "howto" }
   | { kind: "challenges" }
@@ -48,14 +53,22 @@ type View =
   | { kind: "game"; config: MatchConfig; nonce: number };
 
 function Index() {
+  useEffect(() => installCrashHandlers(), []);
+  // Pull anything newer from the cloud in the background. Never gates the first render, and
+  // never creates an account — a player who has not finished a match has nothing to restore.
+  useEffect(() => {
+    void syncIfSignedIn();
+  }, []);
   return (
-    <SettingsProvider>
-      <ProfileProvider>
-        <ChallengeProvider>
-          <Screens />
-        </ChallengeProvider>
-      </ProfileProvider>
-    </SettingsProvider>
+    <ErrorBoundary>
+      <SettingsProvider>
+        <ProfileProvider>
+          <ChallengeProvider>
+            <Screens />
+          </ChallengeProvider>
+        </ProfileProvider>
+      </SettingsProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -155,7 +168,15 @@ function Screens() {
     return <ProfileScreen onBack={() => setView({ kind: "home" })} />;
   }
   if (view.kind === "settings") {
-    return <SettingsScreen onBack={() => setView({ kind: "home" })} />;
+    return (
+      <SettingsScreen
+        onBack={() => setView({ kind: "home" })}
+        onPrivacy={() => setView({ kind: "privacy" })}
+      />
+    );
+  }
+  if (view.kind === "privacy") {
+    return <PrivacyScreen onBack={() => setView({ kind: "settings" })} />;
   }
   if (view.kind === "setup") {
     return (

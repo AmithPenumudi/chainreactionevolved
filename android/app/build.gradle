@@ -1,5 +1,22 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// Version comes from two places on purpose:
+//   versionName  <- package.json "version", so the web build, the APK and the in-app version
+//                   display can never disagree about which release this is.
+//   versionCode  <- android/version.properties, because Play needs a monotonic integer that
+//                   semver cannot provide. Bump both with `npm run release:bump`.
+def appVersionName = new JsonSlurper()
+        .parse(rootProject.file('../package.json'))
+        .version
+def versionPropsFile = rootProject.file('version.properties')
+def versionProps = new Properties()
+if (versionPropsFile.exists()) {
+    versionProps.load(new FileInputStream(versionPropsFile))
+}
+def appVersionCode = (versionProps['versionCode'] ?: '1') as int
+
 // Release signing credentials live outside version control — see android/keystore/keystore.properties
 // (gitignored). Falls back to null (unsigned release build) if that file isn't present, e.g. in CI's
 // debug-only build job.
@@ -17,8 +34,8 @@ android {
         applicationId "com.chainreactionevolved.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

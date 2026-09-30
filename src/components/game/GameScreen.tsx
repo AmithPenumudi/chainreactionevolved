@@ -17,7 +17,7 @@ import {
 import { AbilityId, abilityById, castAbility } from "@/game/abilities";
 import { getArenaMap } from "@/game/arena-maps";
 import { buildChaosBoard } from "@/game/chaos-grid";
-import { chooseAIMove, chooseAIAction } from "@/game/ai";
+import { chooseAIActionAsync } from "@/game/ai-client";
 import { MatchConfig } from "./SetupScreen";
 import { CellView } from "./CellView";
 import { AbilityBar } from "./AbilityBar";
@@ -25,6 +25,16 @@ import { colorFor, PLAYER_SYMBOLS, lighten, darken } from "@/game/colors";
 import { VictoryScreen } from "./VictoryScreen";
 import { speedFactor, useSettings } from "@/game/settings";
 import { playSfx } from "@/game/sound";
+import { haptic } from "@/game/haptics";
+import { MAX_UNDOS, UndoHistory, undoAllowed } from "@/game/undo";
+import { syncAfterMatch } from "@/game/sync/sync";
+import {
+  BOARD_PADDING,
+  CELL_GAP,
+  computeCellSize,
+  ZOOM_BELOW,
+  ZOOMED_CELL,
+} from "@/game/board-size";
 import { statsModeFor, useProfile } from "@/game/profile";
 import { useChallenges } from "@/game/challenges";
 
@@ -54,9 +64,6 @@ interface AnimationState {
   showShrinkBanner: { key: number } | null;
 }
 
-const BOARD_PADDING = 10;
-const CELL_GAP = 4;
-
 export function GameScreen({ config, onExit, onRematch }: Props) {
   const modeConfig = MODE_CONFIGS[config.modeKind];
   const { settings } = useSettings();
@@ -81,6 +88,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     powerTilesCaptured: 0,
   });
   const recorded = useRef(false);
+
+  // Undo (one human vs bots): a snapshot of the board *and* the stats tally is taken before each
+  // of the human's moves, so an undone move never counts towards profile or challenge stats.
+  const undoEnabled = useMemo(() => undoAllowed(config.players), [config.players]);
+  const undoHistory = useRef(new UndoHistory<{ state: GameState; tally: typeof tally.current }>());
+  const [undoInfo, setUndoInfo] = useState({ available: false, left: MAX_UNDOS });
+  const syncUndo = () =>
+    setUndoInfo({ available: undoHistory.current.canUndo, left: undoHistory.current.remaining });
 
   const [state, setState] = useState<GameState>(() => {
     const board =
@@ -144,7 +159,11 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     setPendingCell(null);
   }, [state.currentPlayerIdx]);
 
-  const cellSize = useCellSize(state.board.rows, state.board.cols);
+  const fitCellSize = useCellSize(state.board.rows, state.board.cols);
+  // Big boards fit a phone only with tiny cells, so offer a zoomed view that scrolls instead.
+  const canZoom = fitCellSize < ZOOM_BELOW;
+  const [zoomed, setZoomed] = useState(false);
+  const cellSize = zoomed && canZoom ? ZOOMED_CELL : fitCellSize;
 
   const currentPlayer = state.players[state.currentPlayerIdx];
   const currentColor = colorFor(currentPlayer.colorIndex);
@@ -214,6 +233,13 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     }
   };
 
+  // One vibration when the match ends (a longer buzz for a win).
+  useEffect(() => {
+    if (state.winner === null) return;
+    haptic(settings, youId !== null && state.winner !== youId ? "lose" : "win");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.winner]);
+
   // Record the finished match into the player profile exactly once.
   useEffect(() => {
     if (recorded.current) return;
@@ -247,10 +273,21 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     };
     recordMatch(outcome);
     recordOutcome(outcome);
+    // First thing worth keeping, so this is where the anonymous account gets created — not at
+    // launch, where someone who opens the app once would cost a monthly active user. Deliberately
+    // not awaited: the result screen must never wait on the network.
+    void syncAfterMatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.winner, state.draw]);
 
   const playResult = async (res: MoveResult, abilityId?: AbilityId) => {
+    if (undoEnabled && res.player === youId) {
+      undoHistory.current.record({
+        state,
+        tally: JSON.parse(JSON.stringify(tally.current)),
+      });
+      syncUndo();
+    }
     trackResult(res, abilityId);
     const willShrink =
       res.winner === null &&
@@ -315,6 +352,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       setPendingCell(null);
     }
     playSfx(settings, "place");
+    haptic(settings, "place");
     await playMove(r, c);
   };
 
@@ -335,6 +373,27 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     setSelectedAbility(id);
   };
 
+  /** Rewinds to just before the human's last move (bot replies included). */
+  const handleUndo = () => {
+    if (!undoEnabled || anim.running || state.winner !== null || state.draw) return;
+    if (currentPlayer.isAI) return; // a bot is thinking / moving: wait for the human's turn
+    const snap = undoHistory.current.undo();
+    if (!snap) return;
+    tally.current = snap.tally;
+    setState({ ...snap.state, turnStartAt: Date.now() });
+    setAnim((a) => ({
+      ...a,
+      displayBoard: snap.state.board,
+      explodingKeys: new Set(),
+      flying: [],
+      showChainBanner: null,
+    }));
+    setSelectedAbility(null);
+    setAbilityFirstTarget(null);
+    setPendingCell(null);
+    syncUndo();
+  };
+
   // AI turn driver
   useEffect(() => {
     if (state.winner !== null || state.draw) return;
@@ -348,8 +407,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     const delay = Math.max(0, Math.min(450, timeLeft - 300));
     const t = setTimeout(async () => {
       if (cancelled) return;
-      const action = chooseAIAction(state, currentPlayer.difficulty ?? "normal");
-      if (!action) return;
+      // Heavy searches run in a worker so the board stays responsive while the bot thinks.
+      const action = await chooseAIActionAsync(state, currentPlayer.difficulty ?? "normal");
+      if (cancelled || !action) return; // the position changed while thinking (e.g. timer forfeit)
       if (action.type === "ability" && action.abilityId && action.targets) {
         const res = castAbility(state, action.abilityId, action.targets);
         if (res) await playResult(res, action.abilityId);
@@ -385,7 +445,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       );
       const travel = Math.round((chain < 3 ? 260 : chain < 10 ? 200 : chain < 20 ? 150 : 110) * sf);
 
-      if (step.explosions.length > 0) playSfx(settings, "explode");
+      if (step.explosions.length > 0) {
+        playSfx(settings, "explode");
+        haptic(settings, "explode");
+      }
       setAnim((a) => ({ ...a, explodingKeys: keys, flying: [] }));
       await sleep(anticipation);
 
@@ -547,7 +610,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   return (
     <div className="min-h-screen px-3 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-[1600px]">
-        <header className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:justify-between">
+        <header className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 sm:flex sm:items-center sm:justify-between">
           <div className="min-w-0">
             <button
               onClick={onExit}
@@ -555,19 +618,48 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
             >
               ← MENU
             </button>
-            <h1 className="mt-1 truncate font-display text-lg tracking-widest sm:text-xl">
+            <h1 className="mt-1 break-words font-display text-base leading-tight tracking-widest sm:text-xl">
               {modeLabel.toUpperCase()} · {state.board.rows}×{state.board.cols}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-4 text-right">
+          {/* Actions: their own row on phones (three buttons would squeeze the title to nothing). */}
+          <div
+            className="col-span-2 row-start-2 flex flex-wrap items-center gap-2 sm:order-2 sm:col-span-1 sm:row-start-auto sm:ml-auto sm:mr-4"
+            data-testid="game-actions"
+          >
+            {canZoom && (
+              <button
+                onClick={() => setZoomed((z) => !z)}
+                aria-pressed={zoomed}
+                className={`whitespace-nowrap rounded-md border px-2 py-1 text-[10px] tracking-[0.2em] ${
+                  zoomed
+                    ? "border-foreground/50 text-foreground"
+                    : "border-foreground/20 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                ⌕ ZOOM
+              </button>
+            )}
+            {undoEnabled && (
+              <button
+                onClick={handleUndo}
+                disabled={!undoInfo.available || !clickable}
+                aria-label={`Undo last move, ${undoInfo.left} left`}
+                className="whitespace-nowrap rounded-md border border-foreground/20 px-2 py-1 text-[10px] tracking-[0.2em] text-muted-foreground enabled:hover:text-foreground disabled:opacity-40"
+              >
+                ↶ UNDO {undoInfo.left}
+              </button>
+            )}
             {modeConfig.specialTiles && (
               <button
                 onClick={() => setShowTileInfo((v) => !v)}
-                className="rounded-md border border-foreground/20 px-2 py-1 text-[10px] tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                className="whitespace-nowrap rounded-md border border-foreground/20 px-2 py-1 text-[10px] tracking-[0.2em] text-muted-foreground hover:text-foreground"
               >
                 TILE INFO
               </button>
             )}
+          </div>
+          <div className="flex shrink-0 items-center gap-4 text-right sm:order-3">
             <div>
               <div className="text-[10px] tracking-[0.3em] text-muted-foreground">TURN</div>
               <div className="font-display text-lg">{state.turn + 1}</div>
@@ -579,9 +671,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
           </div>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_240px]">
+        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_240px] land:grid-cols-[minmax(0,1fr)_280px] land:items-start">
           {/* Left: players */}
-          <aside className="order-2 lg:order-1">
+          <aside className="order-2 lg:order-1 land:order-2 land:col-start-2 land:row-start-1">
             <div className="space-y-2">
               {state.players.map((p) => {
                 const color = colorFor(p.colorIndex);
@@ -654,7 +746,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
           </aside>
 
           {/* Board */}
-          <div className="order-1 lg:order-2 relative flex items-center justify-center">
+          <div
+            className={`order-1 relative flex land:order-1 land:col-start-1 land:row-span-2 land:row-start-1 lg:order-2 ${
+              zoomed && canZoom
+                ? "max-h-[75vh] justify-start overflow-auto rounded-md"
+                : "items-center justify-center"
+            }`}
+            data-testid="board-frame"
+          >
             <div
               className="relative rounded-md"
               style={{
@@ -676,7 +775,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
               >
                 {Array.from({ length: state.board.rows }).map((_, r) =>
                   Array.from({ length: state.board.cols }).map((_, c) => {
-                    const cell = anim.displayBoard.cells[r * state.board.cols + c];
+                    // Indexed with the display board's OWN width: for one frame after a shrink
+                    // it is still the larger pre-shrink board, and mixing the two widths reads
+                    // the wrong cells.
+                    const cell = anim.displayBoard.cells[r * anim.displayBoard.cols + c];
                     const highlightKind = highlight.get(`${r}:${c}`) ?? null;
                     let canP: boolean;
                     if (selectedAbility) {
@@ -736,7 +838,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
               {anim.showChainBanner && (
                 <div
-                  key={anim.showChainBanner.key}
+                  // Namespaced: the two banners are siblings in one JSX child list, and their
+                  // counters are independent — bare numbers collide whenever both happen to
+                  // reach the same value with both banners on screen.
+                  key={`chain-${anim.showChainBanner.key}`}
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 >
                   <div className="combo-banner text-center">
@@ -755,7 +860,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
               {anim.showShrinkBanner && (
                 <div
-                  key={anim.showShrinkBanner.key}
+                  key={`shrink-${anim.showShrinkBanner.key}`}
                   className="pointer-events-none absolute inset-0 flex items-center justify-center"
                 >
                   <div className="shrink-banner text-center">
@@ -772,7 +877,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
           </div>
 
           {/* Right: current turn, abilities, tile info */}
-          <aside className="order-3 space-y-2">
+          <aside className="order-3 space-y-2 land:col-start-2 land:row-start-2">
             <div className="rounded-md border border-foreground/10 p-3">
               <div className="text-[10px] tracking-[0.3em] text-muted-foreground">CURRENT TURN</div>
               <div className="mt-2 flex items-center gap-2">
@@ -1011,15 +1116,7 @@ function useCellSize(rows: number, cols: number) {
 
 function computeSize(rows: number, cols: number) {
   if (typeof window === "undefined") return 40;
-  const isDesktop = window.innerWidth >= 1024;
-  const sideCols = isDesktop ? 540 : 24;
-  const maxW = Math.min(window.innerWidth - sideCols, 1100);
-  const maxH = window.innerHeight - 220;
-  const byW = Math.floor((maxW - cols * CELL_GAP - BOARD_PADDING * 2) / cols);
-  const byH = Math.floor((maxH - rows * CELL_GAP - BOARD_PADDING * 2) / rows);
-  // The floor is small on purpose: a 15-column board must still fit a phone's width, otherwise
-  // the whole page grows wider than the screen and clips the board and player cards.
-  return Math.max(16, Math.min(72, Math.min(byW, byH)));
+  return computeCellSize(rows, cols, window.innerWidth, window.innerHeight);
 }
 
 export default GameScreen;

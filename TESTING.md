@@ -12,8 +12,8 @@ npm test          # run once
 npm run test:watch   # re-run on file changes while developing
 ```
 
-About 300 tests across 14 files (the full run takes a few minutes, mostly the AI and
-brute-force puzzle suites):
+Several hundred tests across ~30 files (the full run takes a few minutes, mostly the AI
+and brute-force puzzle suites):
 
 Game logic (`src/game/__tests__/`)
 - `engine.test.ts` — critical mass, placement rules, chain reactions,
@@ -31,12 +31,43 @@ Game logic (`src/game/__tests__/`)
 - `puzzles.test.ts`, `puzzles.solver.test.ts` — data integrity, plus a brute-force
   solver proving every puzzle is solvable within its move cap and gold is reachable
 - `profile.test.ts`, `challenges.test.ts`, `settings.test.ts`, `persistence.test.ts`
-  — XP/streaks, rotation, and corrupt / blocked / out-of-range localStorage
+  — XP/streaks, rotation, and corrupt / blocked / out-of-range localStorage, puzzle
+  unlock rules (adding puzzles never re-locks anyone)
+- `ai.shrink.test.ts` — Sudden Death awareness: bots avoid the ring the shrink deletes
+- `ai-client.test.ts` — the AI Web Worker client: round trip, crash / timeout / no-Worker
+  fallbacks, concurrent requests
+- `haptics.test.ts`, `undo.test.ts`, `a11y.test.ts` — vibration rules, undo budget,
+  screen-reader cell labels
+
+App code (`src/lib/__tests__/`, `src/components/__tests__/`)
+- `compat.test.ts`, `index-guard.test.ts` — the "update WebView" guard (the inline
+  `index.html` script is executed under both supported and unsupported conditions)
+- `crash-log.test.ts`, `ErrorBoundary.test.tsx` — on-device error log and recovery screen
 
 Component flow (`src/components/game/__tests__/`)
 - `GameScreen.flow.test.tsx` — renders the real GameScreen under jsdom and plays
   complete bot-vs-bot matches (classic, 4-player, Sudden Death, Abilities, Arena,
   Blitz timer) to the result screen
+- `GameScreen.undo.test.tsx`, `GameScreen.zoom.test.tsx`, `cellsize.test.ts` — undo
+  flow, zoom toggle on big boards, and board sizing for portrait / landscape / desktop
+
+React only flushes effects when an `act()` scope ends, so component tests that wait for a
+bot must advance fake timers in many short `act()` calls (see `advance()` in the undo test).
+
+### Android smoke test (real device / emulator)
+
+```
+npm run build:capacitor && npx cap sync android && (cd android && ./gradlew assembleDebug)
+npm run test:android            # installs the debug APK, then drives the real app
+npm run test:android -- --no-install --serial emulator-5554
+```
+
+`scripts/android-smoke.mjs` uses adb plus the WebView's DevTools protocol (no extra
+dependencies) to check: the WebView guard, home screen, Back navigation, orb colours, a
+real match with undo, Hard-bot responsiveness (no main-thread stall over 400 ms) and that no
+JavaScript exception is thrown. It taps with real touch gestures, because a scripted
+`element.click()` has no user activation and Chrome then skips the page's history entries,
+which makes Back behave differently from what a player sees.
 
 **When to add a test:** any time you touch `src/game/*.ts` and the change
 affects behavior (not just visuals) — new ability, new tile type, new AI
@@ -55,6 +86,16 @@ Chrome 113 — real phones can be older still):
 - 15-column boards must fit the phone width (no horizontal page overflow).
 - Chrome DevTools can attach to the debug build: `adb forward tcp:9222
   localabstract:webview_devtools_remote_<pid>` then open `http://localhost:9222/json`.
+- The `Pixel_2_API_27` emulator image ships Chrome 61. The app cannot run there at all; the
+  classic inline script in `capacitor-src/index.html` must show "Update needed" instead of a
+  blank white page (the React bundle cannot even be parsed on such a WebView).
+- Landscape phones use a two-column layout (`land:` variant in `styles.css`). Rotate with
+  `adb shell cmd window user-rotation lock 1` (and `lock 0` to go back).
+- Hard AI runs in a Web Worker (`src/game/ai.worker.ts`); it must not stall the UI.
+- Inter is bundled (`src/assets/fonts`, `@font-face` in `styles.css`), so the app looks the
+  same offline. Check with airplane mode: `adb shell cmd connectivity airplane-mode enable`
+  and confirm `document.fonts.check("16px Inter")` is true. `fonts.test.ts` fails if any
+  Google Fonts URL creeps back in.
 
 
 Automated tests don't touch the native shell, rendering, or touch input —

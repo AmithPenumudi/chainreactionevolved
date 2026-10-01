@@ -13,9 +13,10 @@ import {
   MoveResult,
   neighbors,
   orbsOwnedBy,
-  forfeitTurn,
+  forfeitTurnWithShrink,
+  passTurnUntilPlayable,
 } from "@/game/engine";
-import { AbilityId, abilityById, castAbility } from "@/game/abilities";
+import { AbilityId, abilityById, canActNow, castAbility } from "@/game/abilities";
 import { getArenaMap } from "@/game/arena-maps";
 import { buildChaosBoard } from "@/game/chaos-grid";
 import { chooseAIActionAsync } from "@/game/ai-client";
@@ -144,7 +145,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     if (state.winner !== null || state.draw || anim.running) return;
     const id = setInterval(() => {
       const left = state.rules.turnTimeMs - (Date.now() - state.turnStartAt);
-      if (left <= 0) setState((s) => forfeitTurn(s));
+      // A forfeited turn still counts towards the Sudden Death clock, so the shrink it may have
+      // just crossed goes with it. Both halves are pure engine, so they are tested there.
+      if (left <= 0) setState(forfeitTurnWithShrink);
     }, 100);
     return () => clearInterval(id);
   }, [state.rules.turnTimeMs, state.turnStartAt, state.winner, state.draw, anim.running]);
@@ -152,6 +155,18 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   useEffect(() => {
     if (!anim.running) setAnim((a) => ({ ...a, displayBoard: state.board }));
   }, [state.board, anim.running]);
+
+  // A turn with nothing legal left in it has to pass itself on. Owning a cell normally guarantees a
+  // placement, but an EMP lock on a player's only cell while every other cell belongs to an
+  // opponent leaves them nothing — and they are not eliminated, so no other rule would ever move
+  // the turn along. Without a timer the match simply stopped here.
+  useEffect(() => {
+    if (anim.running || state.winner !== null || state.draw) return;
+    if (canActNow(state)) return;
+    // `passTurnUntilPlayable` returns its input untouched when the player on turn can already act,
+    // so running it on every state cannot loop: a dead position settles on `draw` and stays there.
+    setState((s) => passTurnUntilPlayable(s, canActNow));
+  }, [state, anim.running]);
 
   // Reset ability targeting when turn changes
   useEffect(() => {
@@ -170,6 +185,11 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   const currentColor = colorFor(currentPlayer.colorIndex);
 
   const clickable = !anim.running && state.winner === null && !state.draw && !currentPlayer.isAI;
+  // An owed Double Drop survives one ability cast, not two (see `extraPlacementCastUsed`). Once it
+  // is spent, `castAbility` refuses, so the bar is greyed out instead of offering dead buttons.
+  const abilitiesLocked =
+    state.extraPlacementFor === state.players[state.currentPlayerIdx].id &&
+    state.extraPlacementCastUsed;
 
   const turnTimeLeft = useMemo(() => {
     if (state.rules.turnTimeMs <= 0) return Infinity;
@@ -410,7 +430,14 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
       if (cancelled) return;
       // Heavy searches run in a worker so the board stays responsive while the bot thinks.
       const action = await chooseAIActionAsync(state, currentPlayer.difficulty ?? "normal");
-      if (cancelled || !action) return; // the position changed while thinking (e.g. timer forfeit)
+      if (cancelled) return; // the position changed while thinking (e.g. timer forfeit)
+      if (!action) {
+        // No legal placement anywhere — reachable when a bot's only cell is EMP-locked and every
+        // other cell belongs to an opponent. It is not eliminated, so nothing else would ever move
+        // the turn on and the match would sit here for good.
+        setState((s) => passTurnUntilPlayable(s, canActNow));
+        return;
+      }
       if (action.type === "ability" && action.abilityId && action.targets) {
         const res = castAbility(state, action.abilityId, action.targets);
         if (res) await playResult(res, action.abilityId);
@@ -937,7 +964,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                 energy={state.energy[currentPid]}
                 selectedAbility={selectedAbility}
                 onSelect={onSelectAbility}
-                disabled={!clickable}
+                disabled={!clickable || abilitiesLocked}
               />
             )}
 
@@ -1011,7 +1038,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                   energy={state.energy[currentPid]}
                   selectedAbility={selectedAbility}
                   onSelect={onSelectAbility}
-                  disabled={!clickable}
+                  disabled={!clickable || abilitiesLocked}
                   compact
                 />
               </div>

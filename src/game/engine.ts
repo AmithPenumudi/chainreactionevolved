@@ -89,6 +89,13 @@ export interface GameState {
   powerBonus: number[];
   /** Set to a player id if that player's next placement is an extra placement (Double Drop or Power Tile bonus). */
   extraPlacementFor: PlayerId | null;
+  /**
+   * True once the player who owes an extra placement has spent an ability during that window.
+   * An owed drop keeps the turn, and without this a cast that keeps the turn could be repeated
+   * forever — on an amplifier board each cast refunds its own cost from the chain it starts, so
+   * the opponent never moved again. One cast is allowed; the second is rejected.
+   */
+  extraPlacementCastUsed: boolean;
 }
 
 export interface ExplosionStep {
@@ -118,6 +125,14 @@ export interface MoveResult {
   grantsExtraPlacement?: boolean;
   /** Whether this move consumed a power-tile bonus. */
   usedPowerBonus?: boolean;
+  /** True for an ability cast; false/absent for a placement. Abilities do not spend a drop. */
+  isAbility?: boolean;
+  /**
+   * True when `resolveExplosions` hit its iteration cap and discarded the overflow. The cascade
+   * really happened, but its counts describe an oscillation rather than a chain a player built,
+   * so they must not be recorded as a personal best.
+   */
+  truncated?: boolean;
   /** Which power tiles the player captured during this move (grant bonus on commit). */
   capturedPowerTiles?: number;
 }
@@ -170,7 +185,7 @@ export function neighbors(b: BoardState, r: number, c: number): [number, number]
 }
 
 /** Neighbors filtered for arena: walls are impassable to explosions. */
-function propagatingNeighbors(b: BoardState, r: number, c: number): [number, number][] {
+export function propagatingNeighbors(b: BoardState, r: number, c: number): [number, number][] {
   return neighbors(b, r, c).filter(([nr, nc]) => {
     const n = b.cells[nr * b.cols + nc];
     return n.tile !== "wall";
@@ -178,7 +193,9 @@ function propagatingNeighbors(b: BoardState, r: number, c: number): [number, num
 }
 
 export function canPlace(state: GameState, r: number, c: number): boolean {
-  if (state.winner !== null) return false;
+  // A draw is as final as a winner. Only `winner` was checked here, so a drawn game (every
+  // remaining player wiped out by the same Sudden Death shrink) still accepted placements.
+  if (state.winner !== null || state.draw) return false;
   const p = state.players[state.currentPlayerIdx].id;
   const cell = state.board.cells[idx(state.board, r, c)];
   if (cell.tile === "wall" || cell.tile === "dead") return false;
@@ -190,6 +207,20 @@ export function canPlace(state: GameState, r: number, c: number): boolean {
     return false;
   }
   return cell.owner === null || cell.owner === p;
+}
+
+/**
+ * Whether the player on turn can place anywhere at all.
+ *
+ * Normally owning a cell guarantees a move, but an EMP lock on a player's only cell while every
+ * other cell belongs to an opponent leaves them with nothing legal. They are not eliminated
+ * (they still hold a cell), so without this the turn would sit on them forever.
+ */
+export function hasLegalMove(state: GameState): boolean {
+  for (let r = 0; r < state.board.rows; r++) {
+    for (let c = 0; c < state.board.cols; c++) if (canPlace(state, r, c)) return true;
+  }
+  return false;
 }
 
 export function makeInitialState(
@@ -224,6 +255,7 @@ export function makeInitialState(
     energy: players.map(() => 0),
     powerBonus: players.map(() => 0),
     extraPlacementFor: null,
+    extraPlacementCastUsed: false,
   };
 }
 
@@ -314,11 +346,8 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
   startCell.owner = player;
   const capturedPowerTiles = startCell.tile === "power" && wasNotOwned ? 1 : 0;
 
-  const { steps, chainCount, capturedCells, eliminatedThisMove, winner } = resolveExplosions(
-    state,
-    board,
-    player,
-  );
+  const { steps, chainCount, capturedCells, eliminatedThisMove, winner, truncated } =
+    resolveExplosions(state, board, player);
 
   // Energy grants (only meaningful in abilities mode; safe to compute always).
   let energyDelta = 2; // placement
@@ -346,7 +375,71 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
     capturedPowerTiles,
     keepTurn: isExtra,
     usedPowerBonus: isExtra && state.modeConfig.specialTiles,
+    truncated,
   };
+}
+
+/**
+ * Everything about a board that decides how the next wave resolves: orbs, owner, and the two flags
+ * that change critical mass or absorb a deposit. Tile kind and portal pairing are immutable, so
+ * they cannot differ between two waves of the same cascade.
+ */
+function boardSignature(b: BoardState): string {
+  let out = "";
+  for (const c of b.cells) {
+    out += `${c.orbs},${c.owner ?? "-"}${c.fortified ? "f" : ""}${c.shielded ? "s" : ""};`;
+  }
+  return out;
+}
+
+/**
+ * An upper bound on the orbs a board could hold with every cell below its critical mass.
+ *
+ * Deliberately optimistic: a `reactor` counts its +1 whether or not it is owned yet, because it may
+ * be captured later in the cascade and that would raise the real bound. `fortified` is counted as it
+ * stands, because an explosion can only ever clear it, which lowers the bound. So this number never
+ * grows as the cascade proceeds — which is what makes "over capacity" a permanent verdict rather
+ * than a snapshot.
+ */
+function settleCapacity(b: BoardState): number {
+  let cap = 0;
+  for (let r = 0; r < b.rows; r++) {
+    for (let c = 0; c < b.cols; c++) {
+      const cell = b.cells[r * b.cols + c];
+      if (cell.tile === "wall" || cell.tile === "dead") continue;
+      let cm = propagatingNeighbors(b, r, c).length;
+      if (cm < 2) cm = 2;
+      if (cell.fortified) cm += 1;
+      if (cell.tile === "reactor") cm += 1;
+      cap += cm - 1;
+    }
+  }
+  return cap;
+}
+
+/**
+ * Whether anything on this board can swallow an orb: a `dead` tile, a live shield, or a cell sealed
+ * in by walls with nowhere to send what it holds.
+ *
+ * Only ever called before the cascade starts, and that is sound in the direction it is used: tiles
+ * and walls are immutable, and a shield can only break. A board with no sink now will not grow one,
+ * so its orb count is non-decreasing and `settleCapacity` can be trusted as a permanent verdict.
+ */
+function hasOrbSink(b: BoardState): boolean {
+  for (let r = 0; r < b.rows; r++) {
+    for (let c = 0; c < b.cols; c++) {
+      const cell = b.cells[r * b.cols + c];
+      if (cell.tile === "dead" || cell.shielded) return true;
+      if (cell.tile !== "wall" && propagatingNeighbors(b, r, c).length === 0) return true;
+    }
+  }
+  return false;
+}
+
+function countOrbs(b: BoardState): number {
+  let n = 0;
+  for (const c of b.cells) n += c.orbs;
+  return n;
 }
 
 /** Shared explosion resolver used by moves and abilities that touch the board. */
@@ -360,6 +453,7 @@ export function resolveExplosions(
   capturedCells: number;
   eliminatedThisMove: PlayerId[];
   winner: PlayerId | null;
+  truncated: boolean;
 } {
   const steps: ExplosionStep[] = [];
   let chainCount = 0;
@@ -372,12 +466,57 @@ export function resolveExplosions(
   const eliminatedThisMove: PlayerId[] = [];
 
   let safety = 0;
+  let truncated = false;
   // Amplifiers inject orbs (2 per neighbor instead of 1) rather than conserving them,
   // so a densely-packed amplifier cascade can enter a sustained full-board oscillation
   // instead of naturally draining to a stable state. Cap generously above any real
   // cascade (a full single-file chain across the largest board is ~150 cells) but far
   // below what would make an animation hang for minutes.
   const maxIters = Math.max(200, board.rows * board.cols * 2);
+
+  /**
+   * The board holds more orbs than it can ever stabilise (an amplifier feedback loop, or a dense
+   * board that just shrank). Rather than hand back a permanently unstable board, the overflow is
+   * discarded so every cell ends below its critical mass.
+   */
+  const discardOverflow = () => {
+    truncated = true;
+    for (let rr = 0; rr < board.rows; rr++) {
+      for (let cc = 0; cc < board.cols; cc++) {
+        const cell = board.cells[idx(board, rr, cc)];
+        if (cell.tile === "wall" || cell.tile === "dead" || cell.owner === null) continue;
+        cell.orbs = Math.min(cell.orbs, effectiveCriticalMass(board, rr, cc) - 1);
+        if (cell.orbs <= 0) {
+          cell.orbs = 0;
+          cell.owner = null;
+          clearCellModifiers(cell);
+        }
+      }
+    }
+    steps.push({ explosions: [], boardAfter: cloneBoard(board), eliminatedAfter: [] });
+  };
+
+  // Two provable ways to know a cascade will never settle, so it can be cut short long before
+  // `maxIters`. That matters for cost: every wave is a full board scan plus a board clone for the
+  // animation, and the AI search pays it on every node that reaches such a position — a saturated
+  // 6x6 amplifier board ran 202 waves and counted over 7000 explosions.
+  //
+  //  1. **Over capacity.** If the board holds more orbs than any settled arrangement could
+  //     (`settleCapacity`), there is nowhere for them to come to rest. Sound only when nothing can
+  //     swallow an orb, since a `dead` tile or a shield could drain it back under the bound later;
+  //     amplifiers only ever add, so without a sink the count cannot fall.
+  //  2. **A repeated board state.** A wave's outcome depends on nothing but the board, so a board
+  //     that comes round a second time is a proven infinite loop — the identical sequence follows
+  //     forever. Signatures are exact strings rather than a hash, because a collision would
+  //     silently truncate a cascade that was going to settle.
+  //
+  // Neither is checked until `watchAfter` waves have passed. An ordinary cascade is a handful of
+  // waves and never pays for any of this, and a long dramatic one — a saturated board that ends in
+  // a win partway through — still plays out as it did.
+  const sinkFree = !hasOrbSink(board);
+  const watchAfter = Math.max(16, (board.rows + board.cols) * 2);
+  const seen = new Set<string>();
+  let waves = 0;
 
   while (true) {
     const unstable: { row: number; col: number; owner: PlayerId }[] = [];
@@ -401,7 +540,20 @@ export function resolveExplosions(
       const cell = board.cells[k];
       const cm = effectiveCriticalMass(board, u.row, u.col);
       const isAmplifier = cell.tile === "amplifier";
-      cell.orbs -= cm;
+      const orbsPerNeighbor = isAmplifier ? 2 : 1;
+      const outlets = propagatingNeighbors(board, u.row, u.col);
+      const ejected = outlets.length * orbsPerNeighbor;
+      // A cell may only lose the orbs it actually throws out. `cm` can exceed the number of
+      // outlets — `fortified` and an owned `reactor` each add one, and the floor at 2 lifts a
+      // cell with a single non-wall neighbour — and subtracting `cm` regardless quietly deleted
+      // the difference. A fortified cell ate one orb every time it fired and a 1xN board lost
+      // one per explosion. The surplus now stays behind instead.
+      //
+      // A cell with no outlet at all (sealed in by walls) is the one case that must still
+      // subtract `cm`: it has nowhere to send orbs, so keeping them would leave it permanently
+      // above its critical mass. It is a sink, like a dead tile.
+      const drained = outlets.length === 0 ? cm : Math.min(cm, ejected);
+      cell.orbs -= drained;
       // Fortify is consumed by explosion.
       if (cell.fortified) cell.fortified = false;
       if (cell.orbs <= 0) {
@@ -410,8 +562,7 @@ export function resolveExplosions(
         cell.owner = null;
         clearCellModifiers(cell);
       }
-      const orbsPerNeighbor = isAmplifier ? 2 : 1;
-      for (const [nr, nc] of propagatingNeighbors(board, u.row, u.col)) {
+      for (const [nr, nc] of outlets) {
         for (let i = 0; i < orbsPerNeighbor; i++) {
           depositOrb(board, nr, nc, u.owner, false, capturedCounter, hops, u.row, u.col);
         }
@@ -444,27 +595,23 @@ export function resolveExplosions(
     const alive = state.players.filter((p) => !eliminatedSoFar.has(p.id));
     if (alive.length <= 1 && state.players.length >= 2) break;
 
-    if (++safety > maxIters) {
-      // The board holds more orbs than it can ever stabilise (e.g. a dense board that just
-      // shrank, or an amplifier feedback loop). Rather than hand back a permanently unstable
-      // board, the overflow is discarded so every cell ends below its critical mass.
-      for (let rr = 0; rr < board.rows; rr++) {
-        for (let cc = 0; cc < board.cols; cc++) {
-          const cell = board.cells[idx(board, rr, cc)];
-          if (cell.tile === "wall" || cell.tile === "dead" || cell.owner === null) continue;
-          cell.orbs = Math.min(cell.orbs, effectiveCriticalMass(board, rr, cc) - 1);
-          if (cell.orbs <= 0) {
-            cell.orbs = 0;
-            cell.owner = null;
-            clearCellModifiers(cell);
-          }
-        }
+    // A full cycle has been completed by the time a signature repeats, so every elimination the
+    // oscillation can produce has already been recorded above.
+    if (++waves >= watchAfter) {
+      if (sinkFree && countOrbs(board) > settleCapacity(board)) {
+        discardOverflow();
+        break;
       }
-      steps.push({
-        explosions: [],
-        boardAfter: cloneBoard(board),
-        eliminatedAfter: [],
-      });
+      const sig = boardSignature(board);
+      if (seen.has(sig)) {
+        discardOverflow();
+        break;
+      }
+      seen.add(sig);
+    }
+
+    if (++safety > maxIters) {
+      discardOverflow();
       break;
     }
   }
@@ -481,6 +628,7 @@ export function resolveExplosions(
     capturedCells: capturedCounter.n,
     eliminatedThisMove,
     winner,
+    truncated,
   };
 }
 
@@ -540,9 +688,15 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
   // Determine whether the player keeps the turn (extra placement).
   let extraPlacementFor = state.extraPlacementFor;
   const keepTurn = !!res.keepTurn;
-  if (extraPlacementFor === res.player) {
+  // An ability is not a drop, so it leaves an owed placement standing — but it is allowed to do
+  // that only once per window (see `extraPlacementCastUsed`).
+  let extraPlacementCastUsed = state.extraPlacementCastUsed;
+  if (res.isAbility) {
+    if (extraPlacementFor === res.player) extraPlacementCastUsed = true;
+  } else if (extraPlacementFor === res.player) {
     // Consumed an extra placement.
     extraPlacementFor = null;
+    extraPlacementCastUsed = false;
   }
   // Double Drop: the caster still owes one more placement.
   if (res.grantsExtraPlacement && winner === null) extraPlacementFor = res.player;
@@ -553,13 +707,21 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
 
   const turnAdvance = keepTurn && winner === null;
 
+  // A cascade that hit the iteration cap is an oscillation, not a chain a player built: on a
+  // dense amplifier board it counts thousands of explosions on a board of a few dozen cells.
+  // Recording that as "biggest chain" makes the stat meaningless, so it is clamped to something
+  // the board could actually produce.
+  const reportedChain = res.truncated
+    ? Math.min(res.chainCount, res.boardAfter.rows * res.boardAfter.cols)
+    : res.chainCount;
+
   const nextState: GameState = {
     ...state,
     board: res.boardAfter,
     hasMoved,
     eliminated,
     turn: state.turn + 1,
-    largestChain: Math.max(state.largestChain, res.chainCount),
+    largestChain: Math.max(state.largestChain, reportedChain),
     totalExplosions: state.totalExplosions + res.chainCount,
     totalCapturedCells: state.totalCapturedCells + res.capturedCells,
     winner,
@@ -567,6 +729,7 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     energy,
     powerBonus,
     extraPlacementFor,
+    extraPlacementCastUsed,
     turnStartAt: Date.now(),
   };
 
@@ -577,13 +740,25 @@ export function commitMove(state: GameState, res: MoveResult): GameState {
     // Sweep expiring shields/EMPs for the incoming player.
     const board = clearExpiringModifiers(nextState.board, nextPid, nextState.turn);
 
-    // Grant extra placement if this player has a stored power-tile bonus.
+    // Grant extra placement if this player has a stored power-tile bonus. An owed placement that
+    // belongs to a player who has since been eliminated is dropped first: it can never be played,
+    // and while it sat there no other player could ever be granted one.
     let extra = nextState.extraPlacementFor;
+    if (extra !== null && eliminated[extra]) extra = null;
     if (state.modeConfig.specialTiles && powerBonus[nextPid] > 0 && extra === null) {
       extra = nextPid;
     }
 
-    return { ...nextState, board, currentPlayerIdx: nextIdx, extraPlacementFor: extra };
+    return {
+      ...nextState,
+      board,
+      currentPlayerIdx: nextIdx,
+      extraPlacementFor: extra,
+      extraPlacementCastUsed:
+        extra === nextState.extraPlacementFor && extra !== null
+          ? nextState.extraPlacementCastUsed
+          : false,
+    };
   }
   return nextState;
 }
@@ -603,7 +778,16 @@ export function orbsOwnedBy(board: BoardState, pid: PlayerId): number {
 /** Advance the current player without making a move (used for turn timers). */
 export function forfeitTurn(state: GameState): GameState {
   if (state.winner !== null || state.draw) return state;
-  const next: GameState = { ...state, turnStartAt: Date.now(), extraPlacementFor: null };
+  // The turn counter has to move even when nobody played. EMP locks expire against an absolute
+  // turn number, so with `turn` frozen a lock set in a timed game never lifted once both players
+  // started letting the clock run out — the cell stayed unplayable for the rest of the match.
+  const next: GameState = {
+    ...state,
+    turn: state.turn + 1,
+    turnStartAt: Date.now(),
+    extraPlacementFor: null,
+    extraPlacementCastUsed: false,
+  };
   next.currentPlayerIdx = nextPlayerIdx(next);
   const pid = next.players[next.currentPlayerIdx].id;
   next.board = clearExpiringModifiers(next.board, pid, next.turn);
@@ -611,6 +795,47 @@ export function forfeitTurn(state: GameState): GameState {
     next.extraPlacementFor = pid;
   }
   return next;
+}
+
+/**
+ * A forfeited turn plus the Sudden Death shrink it may have just crossed.
+ *
+ * `forfeitTurn` advances `turn`, and the shrink is scheduled off that same counter, so a turn that
+ * times out exactly on the boundary has to shrink too — otherwise advancing the counter steps
+ * straight over a shrink that should have happened.
+ */
+export function forfeitTurnWithShrink(state: GameState): GameState {
+  const next = forfeitTurn(state);
+  if (next.turn === state.turn) return next; // nothing was forfeited (already decided)
+  const every = next.rules.shrinkIntervalRounds;
+  if (next.winner !== null || next.draw || !next.rules.enableShrink || every <= 0) return next;
+  if (next.turn % every !== 0) return next;
+  return applyShrink(next) ?? next;
+}
+
+/**
+ * Hands the turn on until it reaches a player who can actually act, and reports a draw if it gets
+ * all the way round without finding one.
+ *
+ * Owning a cell normally guarantees a move, but an EMP lock on a player's only cell while every
+ * other cell belongs to an opponent leaves them with nothing legal — and they are not eliminated,
+ * so no other rule would move the turn along and the match simply stopped there. `canAct` is
+ * injected because what counts as "able to act" includes castable abilities, which live a layer up.
+ *
+ * Returns the state unchanged when the player on turn can already act, so a caller may run it on
+ * every state without it looping: a dead position settles on `draw` and stays there.
+ */
+export function passTurnUntilPlayable(
+  state: GameState,
+  canAct: (s: GameState) => boolean,
+): GameState {
+  if (state.winner !== null || state.draw || canAct(state)) return state;
+  let next = state;
+  for (let i = 0; i < state.players.length; i++) {
+    next = forfeitTurn(next);
+    if (canAct(next)) return next;
+  }
+  return { ...next, draw: true, endedAt: Date.now() };
 }
 
 /**
@@ -631,7 +856,7 @@ export function applyShrink(state: GameState): GameState | null {
   }
   const board: BoardState = { rows: newRows, cols: newCols, cells: newCells };
 
-  const { capturedCells } = resolveExplosions(
+  const { capturedCells, chainCount, truncated } = resolveExplosions(
     state,
     board,
     state.players[state.currentPlayerIdx].id,
@@ -657,6 +882,15 @@ export function applyShrink(state: GameState): GameState | null {
     currentPlayerIdx = nextPlayerIdx({ ...state, eliminated });
   }
 
+  // The ring going away can set off a cascade of its own. Only the captures were folded in, so
+  // those explosions were missing from the match totals entirely.
+  const reportedChain = truncated ? Math.min(chainCount, board.rows * board.cols) : chainCount;
+
+  // An owed extra placement cannot survive its owner: left pointing at an eliminated player it
+  // would block every later power-tile bonus, because only one can be outstanding at a time.
+  let extraPlacementFor = state.extraPlacementFor;
+  if (extraPlacementFor !== null && eliminated[extraPlacementFor]) extraPlacementFor = null;
+
   return {
     ...state,
     board,
@@ -666,6 +900,10 @@ export function applyShrink(state: GameState): GameState | null {
     draw,
     shrinkCount: state.shrinkCount + 1,
     totalCapturedCells: state.totalCapturedCells + capturedCells,
+    largestChain: Math.max(state.largestChain, reportedChain),
+    totalExplosions: state.totalExplosions + chainCount,
+    extraPlacementFor,
+    extraPlacementCastUsed: extraPlacementFor === null ? false : state.extraPlacementCastUsed,
     turnStartAt: Date.now(),
     endedAt: winner !== null || draw ? Date.now() : state.endedAt,
   };

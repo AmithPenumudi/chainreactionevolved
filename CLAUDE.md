@@ -59,8 +59,14 @@ On Windows, run Gradle from PowerShell — `gradlew.bat` fails under Git Bash.
 - Python edits on Windows turn LF into CRLF and flood prettier with errors — open with
   `newline=''` and normalise, then run prettier on just the touched files.
 - Never run `prettier --write src` wholesale; it reformats unrelated files.
-- A capped cascade's `chainCount` describes an oscillation, not a chain anyone built — over 7000
-  explosions on a 36-cell board. Use `MoveResult.truncated` before reporting it as a stat.
+- A capped cascade's `chainCount` describes an oscillation, not a chain anyone built. Use
+  `MoveResult.truncated` before reporting it as a stat. `resolveExplosions` exits early once the
+  board is provably unsettleable — over `settleCapacity()` with no sink, or a repeated board state —
+  so don't reintroduce a path that grinds `maxIters` full-board scans to learn the same thing.
+- `sort(() => Math.random() - 0.5)` is not a shuffle; the comparator is inconsistent and the result
+  stays near the input order. Use `shuffled()` in `ai.ts`.
+- Game logic belongs in `src/game/`, not in a React effect. `forfeitTurnWithShrink` and
+  `passTurnUntilPlayable` were moved out of `GameScreen` so they could be tested directly.
 - `forfeitTurn` must advance `turn`: EMP locks expire against an absolute turn number, and the
   Sudden Death shrink is scheduled off the same counter.
 - Bot decisions use `Math.random`. Seed it (`vi.spyOn(Math, "random")`) in any AI test, or the

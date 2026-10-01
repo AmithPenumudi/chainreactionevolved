@@ -8,7 +8,9 @@ import {
   DEFAULT_RULES,
   effectiveCriticalMass,
   forfeitTurn,
+  forfeitTurnWithShrink,
   hasLegalMove,
+  passTurnUntilPlayable,
   makeBoard,
   makeInitialState,
   MODE_CONFIGS,
@@ -21,7 +23,7 @@ import {
   type PlayerConfig,
   type TileKind,
 } from "../engine";
-import { castAbility, hasCastableAbility } from "../abilities";
+import { canActNow, castAbility, hasCastableAbility } from "../abilities";
 import { buildChaosBoard, defaultChaosConfig } from "../chaos-grid";
 
 /*
@@ -106,6 +108,25 @@ function structuralViolations(b: BoardState): string[] {
     }
   }
   return bad;
+}
+
+/**
+ * The engine's settle-capacity bound, re-derived here rather than imported: a test that reuses the
+ * implementation it is checking only proves the code agrees with itself.
+ */
+function settleCapacityOf(b: BoardState): number {
+  let cap = 0;
+  for (let r = 0; r < b.rows; r++) {
+    for (let c = 0; c < b.cols; c++) {
+      const cell = cellAt(b, r, c);
+      if (cell.tile === "wall" || cell.tile === "dead") continue;
+      let cm = Math.max(2, propagatingNeighbors(b, r, c).length);
+      if (cell.fortified) cm += 1;
+      if (cell.tile === "reactor") cm += 1;
+      cap += cm - 1;
+    }
+  }
+  return cap;
 }
 
 /** Orbs a board can legitimately lose when a cell fires: dead tiles and fully sealed cells. */
@@ -269,6 +290,88 @@ describe("adversarial — cascade stress", () => {
     expect(res.chainCount).toBeGreaterThan(rows * cols);
     expect(next.largestChain).toBeLessThanOrEqual(rows * cols);
     expect(next.totalExplosions).toBe(res.chainCount);
+  });
+
+  it("a repeating board state is caught as a cycle instead of running the cap out", () => {
+    const rows = 6;
+    const cols = 6;
+    const b = makeBoard(rows, cols);
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++) {
+        cellAt(b, r, c).tile = "amplifier";
+        own(b, r, c, 0, effectiveCriticalMass(b, r, c) - 1);
+      }
+    const s = newState(2, rows, cols, "arena", b);
+    s.hasMoved = [true, false];
+    const res = applyMove(s, 0, 0)!;
+    expect(res.truncated).toBe(true);
+    // Amplifiers inject orbs, so this board holds more than any settled arrangement could and no
+    // sink can drain it back — provably unsettleable, and there is nothing to learn from grinding
+    // through `max(200, rows * cols * 2)` full-board scans and clones to find that out. It used to
+    // run 202 waves and count over 7000 explosions on 36 cells.
+    const maxIters = Math.max(200, rows * cols * 2);
+    const watchAfter = Math.max(16, (rows + cols) * 2);
+    expect(res.steps.length, `${res.steps.length} waves`).toBeLessThan(maxIters / 4);
+    expect(res.steps.length).toBeLessThanOrEqual(watchAfter + 1);
+    // Stopping early must not change what a settled board has to look like.
+    expect(unstable(res.boardAfter)).toEqual([]);
+    expect(structuralViolations(res.boardAfter)).toEqual([]);
+  });
+
+  it("an orb-conserving oscillation is caught as a repeated board state", () => {
+    // 41 orbs on 40 cells that can hold one each: it cannot settle, and with no amplifier to inject
+    // anything the board cycles rather than diverging. Both routes have to end the cascade.
+    const cols = 40;
+    const b = makeBoard(1, cols);
+    for (let c = 0; c < cols; c++) own(b, 0, c, 0, 1);
+    expect(settleCapacityOf(b), "every cell holds one orb below its critical mass").toBe(cols);
+    const s = newState(2, 1, cols, "classic", b);
+    s.hasMoved = [true, false];
+    const res = applyMove(s, 0, 0)!;
+    expect(res.truncated).toBe(true);
+    expect(res.steps.length).toBeLessThan(Math.max(200, cols * 2));
+    expect(unstable(res.boardAfter)).toEqual([]);
+    expect(structuralViolations(res.boardAfter)).toEqual([]);
+  });
+
+  it("a long cascade that can settle runs to the end and is never cut short", () => {
+    // Half the board loaded: well under capacity, so it has somewhere to come to rest. The cascade
+    // is long enough to pass the watch threshold, which is exactly the case that must not truncate.
+    const cols = 30;
+    const b = makeBoard(1, cols);
+    for (let c = 0; c < cols / 2; c++) own(b, 0, c, 0, 1);
+    const s = newState(2, 1, cols, "classic", b);
+    s.hasMoved = [true, false];
+    const res = applyMove(s, 0, 0)!;
+    expect(res.truncated, "a cascade that could settle was cut short").toBeFalsy();
+    expect(res.steps.length, `${res.steps.length} waves`).toBeGreaterThan(
+      Math.max(16, (1 + cols) * 2) / 4,
+    );
+    expect(unstable(res.boardAfter)).toEqual([]);
+    expect(totalOrbs(res.boardAfter), "and it conserved orbs throughout").toBe(totalOrbs(b) + 1);
+  });
+
+  it("ordinary cascades are untouched by either early-exit check", () => {
+    // Nothing that settles normally may change, and nothing should be flagged as truncated.
+    for (let seed = 1; seed <= 20; seed++) {
+      const rand = rng(seed * 22695477);
+      const b = makeBoard(6, 6);
+      for (let r = 0; r < 6; r++)
+        for (let c = 0; c < 6; c++)
+          if (rand() < 0.6) own(b, r, c, rand() < 0.5 ? 0 : 1, effectiveCriticalMass(b, r, c) - 1);
+      const s = newState(2, 6, 6, "classic", b);
+      s.hasMoved = [true, true];
+      // Place on a cell this player is allowed to use.
+      const target = (() => {
+        for (let r = 0; r < 6; r++)
+          for (let c = 0; c < 6; c++) if (canPlace(s, r, c)) return [r, c] as [number, number];
+        return null;
+      })();
+      if (!target) continue;
+      const res = applyMove(s, ...target)!;
+      expect(res.truncated, `seed ${seed}`).toBeFalsy();
+      expect(totalOrbs(res.boardAfter), `seed ${seed}`).toBe(totalOrbs(b) + 1);
+    }
   });
 
   it("a reactor-and-fortify board cannot be driven into an unstable resting state", () => {
@@ -879,6 +982,83 @@ describe("adversarial — turns that cannot be played", () => {
     expect(hasCastableAbility({ ...s, energy: [0, 0] })).toBe(false);
     expect(hasCastableAbility({ ...s, modeConfig: MODE_CONFIGS.classic })).toBe(false);
     expect(hasCastableAbility({ ...s, winner: 0 })).toBe(false);
+  });
+
+  it("passTurnUntilPlayable leaves a playable turn alone and moves a stuck one on", () => {
+    const playable = newState(2, 4, 4, "classic");
+    expect(passTurnUntilPlayable(playable, canActNow), "a playable turn is untouched").toBe(
+      playable,
+    );
+
+    // P1's only cell is EMP-locked and every other cell is P2's: nothing legal, but P1 still holds
+    // a cell so it is not eliminated.
+    const b = makeBoard(2, 2);
+    own(b, 0, 0, 0, 1);
+    own(b, 0, 1, 1, 1);
+    own(b, 1, 0, 1, 1);
+    own(b, 1, 1, 1, 1);
+    cellAt(b, 0, 0).empLockedFor = 0;
+    cellAt(b, 0, 0).empLockedUntilTurn = 99;
+    const stuck = { ...newState(2, 2, 2, "abilities", b), hasMoved: [true, true], turn: 1 };
+    const moved = passTurnUntilPlayable(stuck, canActNow);
+    expect(
+      moved.players[moved.currentPlayerIdx].id,
+      "the turn went to the player who can act",
+    ).toBe(1);
+    expect(moved.draw).toBe(false);
+  });
+
+  it("a position nobody can play is a draw, and asking again does not loop", () => {
+    // Every cell is locked for whoever owns it, so no player has a placement, and with no energy
+    // there is no cast either. Without this the match would sit on a dead position for good.
+    const b = makeBoard(2, 2);
+    for (let i = 0; i < 4; i++) {
+      const owner = i < 2 ? 0 : 1;
+      b.cells[i].owner = owner;
+      b.cells[i].orbs = 1;
+      b.cells[i].empLockedFor = owner;
+      b.cells[i].empLockedUntilTurn = 99;
+    }
+    const dead = {
+      ...newState(2, 2, 2, "abilities", b),
+      hasMoved: [true, true],
+      turn: 1,
+      energy: [0, 0],
+    };
+    expect(canActNow(dead)).toBe(false);
+    const settled = passTurnUntilPlayable(dead, canActNow);
+    expect(settled.draw).toBe(true);
+    expect(settled.endedAt).not.toBeNull();
+    // Idempotent: a drawn state is returned as-is, so a caller running this on every state cannot
+    // spin — which is exactly how `GameScreen` uses it.
+    expect(passTurnUntilPlayable(settled, canActNow)).toBe(settled);
+  });
+
+  it("forfeitTurnWithShrink shrinks when the forfeited turn is the boundary one", () => {
+    const b = makeBoard(8, 8);
+    own(b, 0, 0, 0, 1);
+    own(b, 4, 4, 1, 1);
+    own(b, 3, 3, 0, 1);
+    const s = newState(2, 8, 8, "classic", b);
+    s.hasMoved = [true, true];
+    s.rules = DEFAULT_RULES["sudden-death"];
+    const every = s.rules.shrinkIntervalRounds;
+
+    // One short of the boundary: the turn passes, the board does not change.
+    const notYet = forfeitTurnWithShrink({ ...s, turn: every - 2 });
+    expect(notYet.turn).toBe(every - 1);
+    expect(notYet.board.rows).toBe(8);
+    expect(notYet.shrinkCount).toBe(0);
+
+    // On the boundary: advancing `turn` would otherwise step straight over the shrink.
+    const onBoundary = forfeitTurnWithShrink({ ...s, turn: every - 1 });
+    expect(onBoundary.turn).toBe(every);
+    expect(onBoundary.board.rows, "the ring should have gone").toBe(6);
+    expect(onBoundary.shrinkCount).toBe(1);
+
+    // A decided game forfeits nothing and shrinks nothing.
+    const decided = { ...s, winner: 0, turn: every - 1 };
+    expect(forfeitTurnWithShrink(decided)).toBe(decided);
   });
 
   it("forfeitTurn advances the turn counter so EMP locks expire", () => {

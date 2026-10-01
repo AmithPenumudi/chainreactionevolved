@@ -379,6 +379,69 @@ export function applyMove(state: GameState, r: number, c: number): MoveResult | 
   };
 }
 
+/**
+ * Everything about a board that decides how the next wave resolves: orbs, owner, and the two flags
+ * that change critical mass or absorb a deposit. Tile kind and portal pairing are immutable, so
+ * they cannot differ between two waves of the same cascade.
+ */
+function boardSignature(b: BoardState): string {
+  let out = "";
+  for (const c of b.cells) {
+    out += `${c.orbs},${c.owner ?? "-"}${c.fortified ? "f" : ""}${c.shielded ? "s" : ""};`;
+  }
+  return out;
+}
+
+/**
+ * An upper bound on the orbs a board could hold with every cell below its critical mass.
+ *
+ * Deliberately optimistic: a `reactor` counts its +1 whether or not it is owned yet, because it may
+ * be captured later in the cascade and that would raise the real bound. `fortified` is counted as it
+ * stands, because an explosion can only ever clear it, which lowers the bound. So this number never
+ * grows as the cascade proceeds — which is what makes "over capacity" a permanent verdict rather
+ * than a snapshot.
+ */
+function settleCapacity(b: BoardState): number {
+  let cap = 0;
+  for (let r = 0; r < b.rows; r++) {
+    for (let c = 0; c < b.cols; c++) {
+      const cell = b.cells[r * b.cols + c];
+      if (cell.tile === "wall" || cell.tile === "dead") continue;
+      let cm = propagatingNeighbors(b, r, c).length;
+      if (cm < 2) cm = 2;
+      if (cell.fortified) cm += 1;
+      if (cell.tile === "reactor") cm += 1;
+      cap += cm - 1;
+    }
+  }
+  return cap;
+}
+
+/**
+ * Whether anything on this board can swallow an orb: a `dead` tile, a live shield, or a cell sealed
+ * in by walls with nowhere to send what it holds.
+ *
+ * Only ever called before the cascade starts, and that is sound in the direction it is used: tiles
+ * and walls are immutable, and a shield can only break. A board with no sink now will not grow one,
+ * so its orb count is non-decreasing and `settleCapacity` can be trusted as a permanent verdict.
+ */
+function hasOrbSink(b: BoardState): boolean {
+  for (let r = 0; r < b.rows; r++) {
+    for (let c = 0; c < b.cols; c++) {
+      const cell = b.cells[r * b.cols + c];
+      if (cell.tile === "dead" || cell.shielded) return true;
+      if (cell.tile !== "wall" && propagatingNeighbors(b, r, c).length === 0) return true;
+    }
+  }
+  return false;
+}
+
+function countOrbs(b: BoardState): number {
+  let n = 0;
+  for (const c of b.cells) n += c.orbs;
+  return n;
+}
+
 /** Shared explosion resolver used by moves and abilities that touch the board. */
 export function resolveExplosions(
   state: GameState,
@@ -410,6 +473,50 @@ export function resolveExplosions(
   // cascade (a full single-file chain across the largest board is ~150 cells) but far
   // below what would make an animation hang for minutes.
   const maxIters = Math.max(200, board.rows * board.cols * 2);
+
+  /**
+   * The board holds more orbs than it can ever stabilise (an amplifier feedback loop, or a dense
+   * board that just shrank). Rather than hand back a permanently unstable board, the overflow is
+   * discarded so every cell ends below its critical mass.
+   */
+  const discardOverflow = () => {
+    truncated = true;
+    for (let rr = 0; rr < board.rows; rr++) {
+      for (let cc = 0; cc < board.cols; cc++) {
+        const cell = board.cells[idx(board, rr, cc)];
+        if (cell.tile === "wall" || cell.tile === "dead" || cell.owner === null) continue;
+        cell.orbs = Math.min(cell.orbs, effectiveCriticalMass(board, rr, cc) - 1);
+        if (cell.orbs <= 0) {
+          cell.orbs = 0;
+          cell.owner = null;
+          clearCellModifiers(cell);
+        }
+      }
+    }
+    steps.push({ explosions: [], boardAfter: cloneBoard(board), eliminatedAfter: [] });
+  };
+
+  // Two provable ways to know a cascade will never settle, so it can be cut short long before
+  // `maxIters`. That matters for cost: every wave is a full board scan plus a board clone for the
+  // animation, and the AI search pays it on every node that reaches such a position — a saturated
+  // 6x6 amplifier board ran 202 waves and counted over 7000 explosions.
+  //
+  //  1. **Over capacity.** If the board holds more orbs than any settled arrangement could
+  //     (`settleCapacity`), there is nowhere for them to come to rest. Sound only when nothing can
+  //     swallow an orb, since a `dead` tile or a shield could drain it back under the bound later;
+  //     amplifiers only ever add, so without a sink the count cannot fall.
+  //  2. **A repeated board state.** A wave's outcome depends on nothing but the board, so a board
+  //     that comes round a second time is a proven infinite loop — the identical sequence follows
+  //     forever. Signatures are exact strings rather than a hash, because a collision would
+  //     silently truncate a cascade that was going to settle.
+  //
+  // Neither is checked until `watchAfter` waves have passed. An ordinary cascade is a handful of
+  // waves and never pays for any of this, and a long dramatic one — a saturated board that ends in
+  // a win partway through — still plays out as it did.
+  const sinkFree = !hasOrbSink(board);
+  const watchAfter = Math.max(16, (board.rows + board.cols) * 2);
+  const seen = new Set<string>();
+  let waves = 0;
 
   while (true) {
     const unstable: { row: number; col: number; owner: PlayerId }[] = [];
@@ -488,28 +595,23 @@ export function resolveExplosions(
     const alive = state.players.filter((p) => !eliminatedSoFar.has(p.id));
     if (alive.length <= 1 && state.players.length >= 2) break;
 
-    if (++safety > maxIters) {
-      truncated = true;
-      // The board holds more orbs than it can ever stabilise (e.g. a dense board that just
-      // shrank, or an amplifier feedback loop). Rather than hand back a permanently unstable
-      // board, the overflow is discarded so every cell ends below its critical mass.
-      for (let rr = 0; rr < board.rows; rr++) {
-        for (let cc = 0; cc < board.cols; cc++) {
-          const cell = board.cells[idx(board, rr, cc)];
-          if (cell.tile === "wall" || cell.tile === "dead" || cell.owner === null) continue;
-          cell.orbs = Math.min(cell.orbs, effectiveCriticalMass(board, rr, cc) - 1);
-          if (cell.orbs <= 0) {
-            cell.orbs = 0;
-            cell.owner = null;
-            clearCellModifiers(cell);
-          }
-        }
+    // A full cycle has been completed by the time a signature repeats, so every elimination the
+    // oscillation can produce has already been recorded above.
+    if (++waves >= watchAfter) {
+      if (sinkFree && countOrbs(board) > settleCapacity(board)) {
+        discardOverflow();
+        break;
       }
-      steps.push({
-        explosions: [],
-        boardAfter: cloneBoard(board),
-        eliminatedAfter: [],
-      });
+      const sig = boardSignature(board);
+      if (seen.has(sig)) {
+        discardOverflow();
+        break;
+      }
+      seen.add(sig);
+    }
+
+    if (++safety > maxIters) {
+      discardOverflow();
       break;
     }
   }
@@ -693,6 +795,47 @@ export function forfeitTurn(state: GameState): GameState {
     next.extraPlacementFor = pid;
   }
   return next;
+}
+
+/**
+ * A forfeited turn plus the Sudden Death shrink it may have just crossed.
+ *
+ * `forfeitTurn` advances `turn`, and the shrink is scheduled off that same counter, so a turn that
+ * times out exactly on the boundary has to shrink too — otherwise advancing the counter steps
+ * straight over a shrink that should have happened.
+ */
+export function forfeitTurnWithShrink(state: GameState): GameState {
+  const next = forfeitTurn(state);
+  if (next.turn === state.turn) return next; // nothing was forfeited (already decided)
+  const every = next.rules.shrinkIntervalRounds;
+  if (next.winner !== null || next.draw || !next.rules.enableShrink || every <= 0) return next;
+  if (next.turn % every !== 0) return next;
+  return applyShrink(next) ?? next;
+}
+
+/**
+ * Hands the turn on until it reaches a player who can actually act, and reports a draw if it gets
+ * all the way round without finding one.
+ *
+ * Owning a cell normally guarantees a move, but an EMP lock on a player's only cell while every
+ * other cell belongs to an opponent leaves them with nothing legal — and they are not eliminated,
+ * so no other rule would move the turn along and the match simply stopped there. `canAct` is
+ * injected because what counts as "able to act" includes castable abilities, which live a layer up.
+ *
+ * Returns the state unchanged when the player on turn can already act, so a caller may run it on
+ * every state without it looping: a dead position settles on `draw` and stays there.
+ */
+export function passTurnUntilPlayable(
+  state: GameState,
+  canAct: (s: GameState) => boolean,
+): GameState {
+  if (state.winner !== null || state.draw || canAct(state)) return state;
+  let next = state;
+  for (let i = 0; i < state.players.length; i++) {
+    next = forfeitTurn(next);
+    if (canAct(next)) return next;
+  }
+  return { ...next, draw: true, endedAt: Date.now() };
 }
 
 /**

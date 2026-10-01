@@ -94,9 +94,16 @@ shrink can wipe out every remaining player at once, and only `winner` used to be
 
 **A turn with nothing legal in it.** Owning a cell normally guarantees a move, but an EMP lock on a
 player's only cell while every other cell belongs to an opponent leaves them nothing — and they are
-not eliminated, so no other rule would move the turn along and the match simply stopped. The engine
-exports `hasLegalMove()`, `abilities.ts` exports `hasCastableAbility()`, and `GameScreen` passes the
-turn on when both say no, declaring a draw if it gets all the way round without finding anybody.
+not eliminated, so no other rule would move the turn along and the match simply stopped.
+`passTurnUntilPlayable(state, canAct)` hands the turn on until it reaches someone who can act and
+reports a draw if it gets all the way round. The predicate is injected because the ability half of
+the answer (`canActNow` in `abilities.ts`, over `hasLegalMove` + `hasCastableAbility`) lives a layer
+up and the engine must not depend on it. It returns its input untouched when the player on turn can
+already act, which is what lets `GameScreen` run it on every state without spinning.
+
+**Turn-passing and the shrink are pure.** `forfeitTurnWithShrink()` and `passTurnUntilPlayable()`
+live in the engine rather than inside a React effect, so both are unit-tested directly instead of
+only through a bot match. `GameScreen` is a one-line caller for each.
 
 **Invariants a settled board must satisfy** (asserted by `engine.invariants.test.ts`):
 
@@ -111,13 +118,30 @@ dense board can oscillate forever. `resolveExplosions` caps iterations and, on h
 discards the overflow so every cell ends below its critical mass. A permanently unstable board
 would be worse than a slightly wrong one.
 
-> **Trap:** a capped cascade's `chainCount` describes the oscillation, not a chain anyone built —
-> a saturated 6×6 amplifier board counts **over 7000 explosions on 36 cells**. `MoveResult.truncated`
-> marks those, and `commitMove` clamps what they contribute to `largestChain` to the cell count, so
-> "biggest chain" stays a number that means something. `totalExplosions` still gets the raw count,
-> because those explosions did happen. The cap is also the engine's worst case for cost: up to
-> `max(200, rows × cols × 2)` waves, each one a full board scan plus a board clone for the
-> animation, and the AI pays it on every search node that reaches such a position.
+> **Trap:** a capped cascade's `chainCount` describes the oscillation, not a chain anyone built.
+> `MoveResult.truncated` marks those, and `commitMove` clamps what they contribute to `largestChain`
+> to the cell count, so "biggest chain" stays a number that means something. `totalExplosions` still
+> gets the raw count, because those explosions did happen.
+
+**Two provable early exits keep the cap from being the common path.** Every wave is a full board
+scan plus a board clone for the animation, and the AI search pays it on every node that reaches such
+a position, so running `max(200, rows × cols × 2)` waves to discover what is knowable in one is the
+engine's worst case for cost. `resolveExplosions` now stops as soon as either holds:
+
+1. **Over capacity.** `settleCapacity()` bounds the orbs a board could hold with every cell below its
+   critical mass. Hold more than that and there is nowhere for them to come to rest. Sound only when
+   nothing can swallow an orb — a `dead` tile or a live shield could drain the count back under the
+   bound later — so it is gated on `hasOrbSink()`. The bound is deliberately optimistic (a `reactor`
+   counts its +1 even unowned, since it may be captured later) so it never grows mid-cascade, which
+   is what makes the verdict permanent rather than a snapshot.
+2. **A repeated board state.** A wave's outcome depends on nothing but the board, so a board that
+   comes round a second time is a proven infinite loop. Signatures are exact strings, not a hash: a
+   collision would silently truncate a cascade that was going to settle.
+
+Neither is checked until `max(16, (rows + cols) × 2)` waves have passed, so an ordinary cascade — a
+handful of waves — pays nothing, and a long dramatic one that ends in a win partway through still
+plays out as it did. Measured on a saturated 6×6 amplifier board: **202 waves and 7029 explosions
+before, 25 waves and 657 explosions after**; on a 10×15, 51 waves against a cap of 301.
 
 ---
 
@@ -168,6 +192,13 @@ nor have an unintended shortcut.
 Three difficulties: `easy` (mostly random with light heuristics), `normal` (one-ply scored),
 `hard` (2-ply alpha-beta with move ordering and a branching cap).
 
+**Sampling must actually be random.** `worstReplyForMe` and the Relocate source search both look at
+a capped sample of candidates, and both used `sort(() => Math.random() - 0.5)` to pick it. That is
+not a shuffle — the comparator is inconsistent, so the result stays close to the input order and the
+"sample" was mostly the first few cells in scan order, which is a bias invisible from outside. Both
+now go through `shuffled()` (Fisher–Yates, on a copy — the old one also sorted the caller's array in
+place). It is exported so its distribution can be asserted directly.
+
 **Always call `chooseAIActionAsync()` from UI code**, not `chooseAIAction()`. The former runs the
 search in a Web Worker so the board stays responsive; on the emulator, hard AI on the largest
 board froze the UI for ~1s per move before this, and ~100ms after. It falls back to the main
@@ -177,8 +208,8 @@ lost.
 **Two things the turn counter and the shrink must agree on.** `forfeitTurn` advances `turn`: EMP
 locks expire against an absolute turn number, so with the counter frozen a lock set in a timed game
 never lifted once both players started letting the clock run out. Because the shrink is scheduled
-off that same counter, `GameScreen` now also applies the shrink when the turn that timed out is the
-boundary one — otherwise advancing `turn` would step straight over a shrink. And `applyShrink` folds
+off that same counter, `forfeitTurnWithShrink()` applies the shrink when the turn that timed out is
+the boundary one — otherwise advancing `turn` would step straight over a shrink. And `applyShrink` folds
 the cascade the ring's removal sets off into `largestChain` / `totalExplosions`; only the captures
 were counted, so those explosions were missing from the match totals entirely.
 
@@ -441,7 +472,8 @@ The `service_role` key belongs only in `.env.local` (gitignored). It bypasses RL
    The only sanctioned sinks are `dead` tiles and cells sealed in by walls.
 9. **Anything that keeps the turn needs a bound.** `keepTurn` with no budget is a soft-lock: the
    opponent never moves again. See `extraPlacementCastUsed`.
-10. **Every merge must be commutative, including its tie-breaks and its key order.** Two devices
+10. **`sort(() => Math.random() - 0.5)` is not a shuffle.** Use `shuffled()`.
+11. **Every merge must be commutative, including its tie-breaks and its key order.** Two devices
     that disagree write to each other forever. `merge.adversarial.test.ts` fuzzes this over 200
     random pairs and asserts byte-identical results both ways round.
 

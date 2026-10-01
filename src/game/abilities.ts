@@ -2,6 +2,7 @@ import {
   cloneBoard,
   effectiveCriticalMass,
   GameState,
+  hasLegalMove,
   idx,
   MoveResult,
   resolveExplosions,
@@ -158,6 +159,16 @@ export function hasCastableAbility(state: GameState): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Whether the player on turn has any action at all — a placement or a cast.
+ *
+ * This is the predicate `passTurnUntilPlayable` needs; it lives here because the ability half of
+ * the answer does, and the engine must not depend on this module.
+ */
+export function canActNow(state: GameState): boolean {
+  return hasLegalMove(state) || hasCastableAbility(state);
 }
 
 /** Build a MoveResult representing an ability-cast on the board. */

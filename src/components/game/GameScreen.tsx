@@ -13,10 +13,10 @@ import {
   MoveResult,
   neighbors,
   orbsOwnedBy,
-  forfeitTurn,
-  hasLegalMove,
+  forfeitTurnWithShrink,
+  passTurnUntilPlayable,
 } from "@/game/engine";
-import { AbilityId, abilityById, castAbility, hasCastableAbility } from "@/game/abilities";
+import { AbilityId, abilityById, canActNow, castAbility } from "@/game/abilities";
 import { getArenaMap } from "@/game/arena-maps";
 import { buildChaosBoard } from "@/game/chaos-grid";
 import { chooseAIActionAsync } from "@/game/ai-client";
@@ -145,21 +145,9 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
     if (state.winner !== null || state.draw || anim.running) return;
     const id = setInterval(() => {
       const left = state.rules.turnTimeMs - (Date.now() - state.turnStartAt);
-      if (left <= 0) {
-        setState((s) => {
-          const next = forfeitTurn(s);
-          // A forfeited turn still counts towards the Sudden Death clock. Without this the shrink
-          // was simply skipped whenever the boundary turn was the one that timed out.
-          const every = next.rules.shrinkIntervalRounds;
-          if (next.winner === null && !next.draw && next.rules.enableShrink && every > 0) {
-            if (next.turn !== s.turn && next.turn % every === 0) {
-              const shrunk = applyShrink(next);
-              if (shrunk) return { ...shrunk, turnStartAt: Date.now() };
-            }
-          }
-          return next;
-        });
-      }
+      // A forfeited turn still counts towards the Sudden Death clock, so the shrink it may have
+      // just crossed goes with it. Both halves are pure engine, so they are tested there.
+      if (left <= 0) setState(forfeitTurnWithShrink);
     }, 100);
     return () => clearInterval(id);
   }, [state.rules.turnTimeMs, state.turnStartAt, state.winner, state.draw, anim.running]);
@@ -174,20 +162,10 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
   // the turn along. Without a timer the match simply stopped here.
   useEffect(() => {
     if (anim.running || state.winner !== null || state.draw) return;
-    if (hasLegalMove(state) || hasCastableAbility(state)) return;
-    setState((s) => {
-      if (s.winner !== null || s.draw) return s;
-      if (hasLegalMove(s) || hasCastableAbility(s)) return s;
-      // Hand the turn on until it reaches someone who can play. If it gets all the way round
-      // without finding anybody, the position is dead and the match is a draw — forfeiting on
-      // forever would just spin, because every forfeit changes the state and re-runs this.
-      let next = s;
-      for (let i = 0; i < s.players.length; i++) {
-        next = forfeitTurn(next);
-        if (hasLegalMove(next) || hasCastableAbility(next)) return next;
-      }
-      return { ...next, draw: true, endedAt: Date.now() };
-    });
+    if (canActNow(state)) return;
+    // `passTurnUntilPlayable` returns its input untouched when the player on turn can already act,
+    // so running it on every state cannot loop: a dead position settles on `draw` and stays there.
+    setState((s) => passTurnUntilPlayable(s, canActNow));
   }, [state, anim.running]);
 
   // Reset ability targeting when turn changes
@@ -457,7 +435,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
         // No legal placement anywhere — reachable when a bot's only cell is EMP-locked and every
         // other cell belongs to an opponent. It is not eliminated, so nothing else would ever move
         // the turn on and the match would sit here for good.
-        setState((s) => (hasLegalMove(s) ? s : forfeitTurn(s)));
+        setState((s) => passTurnUntilPlayable(s, canActNow));
         return;
       }
       if (action.type === "ability" && action.abilityId && action.targets) {

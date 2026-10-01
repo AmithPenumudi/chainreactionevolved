@@ -49,11 +49,13 @@ rather than the rules as written. Each assertion that reads like a regression no
   matrix, portal/amplifier/dead/shield interactions incl. portals with no partner and portals
   pointing at each other, a frozen state passed through `applyMove`, byte-identical repeat results,
   a decided game asked to keep playing, an owed placement outliving its owner, an unbounded ability
-  chain, and injected/hand-corrupted boards
+  chain, injected/hand-corrupted boards, and both cascade early exits — an unsettleable board is cut
+  short, a long one that can settle never is, and a dead position becomes a draw without looping
 - `ai.adversarial.test.ts` — all nine difficulty pairings to completion, four bots on an arena map,
   no unaffordable or out-of-range ability cast, no missed win-in-one, no mutation of the position
   handed to the search, a stale answer arriving after the board moved on, a turn with nothing legal
-  in it, and a cost ceiling on the largest board and on a saturated one
+  in it, a cost ceiling on the largest board and on a saturated one, and the move sampler's
+  distribution (every element reaches every slot, which the sort-based shuffle it replaced did not)
 - `sync/__tests__/merge.adversarial.test.ts` — 200 seeded random device pairs asserting every merge
   is commutative to the byte, idempotent, and reaches a fixed point within one further pass; plus
   time-zone-split period keys, a rollover that must not resurrect a claim, and a two-device

@@ -40,6 +40,31 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/**
+ * A real Fisher-Yates shuffle, on a copy.
+ *
+ * `sort(() => Math.random() - 0.5)` is not a shuffle: the comparator is inconsistent, so the result
+ * is heavily biased towards the original order and depends on the sort implementation. Both places
+ * this replaces used it to pick a random sample, which meant the "sample" was mostly the first few
+ * cells in scan order. It also sorted the caller's array in place.
+ *
+ * Exported so its distribution can be asserted directly — the bias it replaces is invisible from
+ * the outside, which is exactly why it survived.
+ */
+export function shuffled<T>(arr: readonly T[]): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** A random sample of at most `cap` entries, unbiased and without touching the input. */
+function sample<T>(arr: readonly T[], cap: number): T[] {
+  return arr.length > cap ? shuffled(arr).slice(0, cap) : arr.slice();
+}
+
 function neighborsOf(b: BoardState, r: number, c: number): [number, number][] {
   const out: [number, number][] = [];
   if (r > 0) out.push([r - 1, c]);
@@ -323,11 +348,8 @@ function worstReplyForMe(state: GameState, me: PlayerId, sampleCap: number): num
   const moves = legalMoves(state);
   if (moves.length === 0) return evaluateBoardFor(state, me);
 
-  const sample =
-    moves.length > sampleCap ? moves.sort(() => Math.random() - 0.5).slice(0, sampleCap) : moves;
-
   let worst = Infinity;
-  for (const m of sample) {
+  for (const m of sample(moves, sampleCap)) {
     const res = applyMove(state, m.r, m.c);
     if (!res) continue;
     const s = scoreResult(state, res, me);
@@ -492,10 +514,7 @@ export function chooseAIAction(state: GameState, difficulty: AIDifficulty): AIAc
           }
         }
 
-        const sampleSources =
-          sources.length > 10 ? sources.sort(() => Math.random() - 0.5).slice(0, 10) : sources;
-
-        for (const [sr, sc] of sampleSources) {
+        for (const [sr, sc] of sample(sources, 10)) {
           for (let dr = 0; dr < state.board.rows; dr++) {
             for (let dc = 0; dc < state.board.cols; dc++) {
               if (ab.validate(state, dr, dc, 1, [sr, sc])) {

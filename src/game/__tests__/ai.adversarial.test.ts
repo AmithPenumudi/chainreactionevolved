@@ -16,7 +16,7 @@ import {
   type PlayerConfig,
 } from "../engine";
 import { abilityById, castAbility } from "../abilities";
-import { chooseAIAction, chooseAIMove, shrinkUrgency, type AIDifficulty } from "../ai";
+import { chooseAIAction, chooseAIMove, shuffled, shrinkUrgency, type AIDifficulty } from "../ai";
 import { getArenaMap } from "../arena-maps";
 
 /*
@@ -217,6 +217,55 @@ describe("adversarial AI — every action is one the engine accepts", () => {
           expect(canPlace(finished, action.r, action.c)).toBe(false);
       }
     }
+  });
+});
+
+// ------------------------------------------------------------------ sampling
+
+describe("adversarial AI — the move sampler is actually random", () => {
+  it("shuffled keeps every element exactly once and does not touch the input", () => {
+    const input = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    for (let seed = 1; seed <= 20; seed++) {
+      seedRandom(seed * 2654435761);
+      const out = shuffled(input);
+      expect(out).toHaveLength(input.length);
+      expect([...out].sort((a, b) => a - b)).toEqual([...input]);
+      vi.restoreAllMocks();
+    }
+    expect(input).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it("every position reaches every slot, which the sort-based shuffle it replaced did not", () => {
+    // `sort(() => Math.random() - 0.5)` is not a shuffle: the comparator is inconsistent, so the
+    // result stays close to the original order. Both callers used it to take a random sample, so
+    // the "sample" was mostly the first few cells in scan order — a bias invisible from outside,
+    // which is why it survived. A real shuffle moves element 0 off the front most of the time.
+    const n = 10;
+    const runs = 400;
+    const landedAt = Array.from({ length: n }, () => new Set<number>());
+    let firstStayedFirst = 0;
+    const real = Math.random;
+    let a = 123456789 >>> 0;
+    vi.spyOn(Math, "random").mockImplementation(() => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    });
+    const input = Array.from({ length: n }, (_, i) => i);
+    for (let i = 0; i < runs; i++) {
+      const out = shuffled(input);
+      out.forEach((v, slot) => landedAt[v].add(slot));
+      if (out[0] === 0) firstStayedFirst += 1;
+    }
+    vi.restoreAllMocks();
+    expect(Math.random).toBe(real);
+    // Over 400 shuffles of 10 items, every element should have visited every slot at least once.
+    for (let v = 0; v < n; v++) {
+      expect(landedAt[v].size, `element ${v} only reached ${landedAt[v].size} slots`).toBe(n);
+    }
+    // And the first element should stay first about 1 time in 10, not most of the time.
+    expect(firstStayedFirst).toBeLessThan(runs / 4);
   });
 });
 

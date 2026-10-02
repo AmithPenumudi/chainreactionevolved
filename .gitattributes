@@ -1,0 +1,36 @@
+# Line endings.
+#
+# Git stores text as LF and, with core.autocrlf=true (the Windows default), checks it out as
+# CRLF. Prettier's endOfLine defaults to "lf", so on Windows a *clean checkout* failed
+# `npm run lint` with 19,132 "Delete ␍" errors before anyone had edited anything — while
+# `git status` stayed clean, because the normalisation happens on commit. CI never saw it: it
+# runs on Linux, where the checkout is LF anyway.
+#
+# Pinning eol=lf makes every platform check out what the tooling expects. This overrides
+# core.autocrlf, so no one has to change their global git config.
+* text=auto eol=lf
+
+# Except Windows batch files: some Windows shells mis-parse an LF-only .bat, and gradlew.bat is
+# the documented way to build on Windows.
+*.bat text eol=crlf
+
+# Binaries must never be touched. `text=auto` detects most of these on its own; naming them is
+# cheaper than finding out it guessed wrong about a font or a keystore.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg text eol=lf
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.keystore binary
+*.jks binary
+*.apk binary
+*.aab binary
+*.so binary
+*.pdf binary

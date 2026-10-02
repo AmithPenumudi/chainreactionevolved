@@ -335,6 +335,26 @@ orb rendered **black** and the game was unplayable while all tests passed.
 must stay ES5 and inline: on Chrome < 111 the React bundle cannot even be parsed, so this is the
 only code that can run and explain the blank screen.
 
+**Safe areas / edge-to-edge.** `targetSdk 36` means Android 15 (API 35) and up draw the app under
+the status and gesture bars, and `capacitor-src/index.html` opts further in with
+`viewport-fit=cover`. Capacitor then hands the insets to the page as `--safe-area-inset-*` on
+`<html>` and expects CSS to deal with them. `src/styles.css` maps those (with `env()` as the
+iOS/web fallback) onto `--sa-*`, pads `body` with them, and — unlayered, so it beats Tailwind's
+utility — redefines `.min-h-screen` to subtract them.
+
+> **Trap:** Capacitor reports insets **only on API 35+**
+> (`SystemBars.java` gates on `VANILLA_ICE_CREAM`); below that they are all zero. So on an
+> Android 14 emulator this whole mechanism is invisible and a missing inset looks fine. It was
+> missing until an audit found it. To test the behaviour without an Android 15 device, set the
+> four `--safe-area-inset-*` properties on `document.documentElement` by hand — that is the exact
+> path a real device takes.
+
+**No component library.** `src/components/ui/` (46 shadcn components), `src/hooks/` and
+`src/lib/utils.ts` were deleted: nothing in the game ever imported them. They were tree-shaken out
+of the bundle, so removing them changed its size not at all — the win was **42 fewer npm
+dependencies** (55 → 13) and that much less supply-chain surface. The game's UI is hand-written
+Tailwind; if you need a primitive, write it rather than reinstating the library.
+
 **Feedback channels.** `sound.ts` (WebAudio blips) and `haptics.ts` (Vibration API) are both
 best-effort: they no-op when the platform lacks the API, when the setting is off, or under
 Reduced Motion, and never throw. Explosions are throttled in both so a long chain reads as one

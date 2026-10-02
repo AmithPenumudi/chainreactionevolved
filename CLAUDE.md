@@ -71,3 +71,11 @@ On Windows, run Gradle from PowerShell — `gradlew.bat` fails under Git Bash.
   Sudden Death shrink is scheduled off the same counter.
 - Bot decisions use `Math.random`. Seed it (`vi.spyOn(Math, "random")`) in any AI test, or the
   failure is a flake nobody can reproduce.
+- **Never assert a wall-clock budget in a unit test.** Vitest runs files in parallel and the
+  machine is never idle, so the assertion measures contention. `expect(ms).toBeLessThan(1500)`
+  failed at 2271ms with an emulator running and passed in isolation on the same commit;
+  calibrating the budget against `applyMove` was no better (8,700 equivalents in isolation,
+  21,274 in the suite). Assert something deterministic and leave responsiveness to
+  `npm run test:android`, which measures it on a device. Heavy fuzz tests need an explicit
+  generous timeout — the four-bot arena test takes ~54s alone and timed out against the 60s
+  default whenever anything else was running.

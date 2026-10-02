@@ -35,11 +35,19 @@ export default defineConfig(async ({ command, mode }) => {
         cloudflare: {
           nodeCompat: true,
           deployConfig: true,
-          // Without an explicit name nitro derives one from the git remote — "owner-repo",
-          // which put the owner's personal name in the public URL. The deployed address is
-          // https://<this name>.<account subdomain>.workers.dev, and it is also the privacy
-          // policy URL given to Play, so it should read as the game and nothing else.
-          wrangler: { name: "chainreactionevolved" },
+          wrangler: {
+            // Without an explicit name nitro derives one from the git remote — "owner-repo",
+            // which put the owner's personal name in the public URL. The deployed address is
+            // https://<this name>.<account subdomain>.workers.dev, and it is also the privacy
+            // policy URL given to Play, so it should read as the game and nothing else.
+            name: "chainreactionevolved",
+            // Pinned, not derived from the clock. nitro otherwise stamps today's *local* date,
+            // which Cloudflare rejects as "in the future" (error 10021) whenever the build
+            // machine's timezone is ahead of UTC — from IST that is every build before 05:30.
+            // A compatibility date should be a deliberate, stable choice anyway: it decides
+            // which runtime semantics the worker gets, and that should not change per build.
+            compatibility_date: "2026-10-01",
+          },
         },
       }),
     );

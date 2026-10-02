@@ -147,7 +147,26 @@ Play requires a policy at a URL reachable without installing the app. The web bu
 at **`/privacy`**, from the same source as the in-app copy (Settings → Support → Privacy policy),
 so the two cannot disagree.
 
-Deploy the web build and use `https://<your-domain>/privacy`.
+**It is deployed.** Paste this into Play Console -> App content -> Privacy policy:
+
+```
+https://chainreactionevolved.chainreactionevolved.workers.dev/privacy
+```
+
+Redeploying after a policy change:
+
+```bash
+npm run build
+npx wrangler --cwd dist/ deploy
+```
+
+Use wrangler directly rather than `nitro deploy` — nitro wraps it in `execSync`, which mangles
+wrangler's interactive prompts.
+
+> **The workers.dev subdomain is permanent.** Cloudflare binds one per account, once; the API
+> refuses a change with `10036 Account already has an associated subdomain`, which is why the
+> address repeats itself. A custom domain is the only way to improve it — point one at the same
+> worker and the policy URL becomes `https://<domain>/privacy`.
 
 > **The contact address must be a mailbox that is actually read.** The policy publishes
 > `chainreactionevolved@gmail.com` (set in `src/content/privacy.ts`) as the deletion-request
@@ -189,6 +208,9 @@ Plan for: internal testing → closed testing (the 14 days) → production.
       APK is a different artifact, and a release-only problem would not show up anywhere else.
       `adb install -r` the universal APK from `bundletool`, or push the AAB to an internal track
       and install it from Play.
-- [ ] Privacy policy deployed and the URL reachable in a private window
+- [x] Privacy policy deployed and reachable without signing in — verified: `/`, `/privacy` and
+      `/og-image.png` all return 200, and loading either page makes **no request to any origin but
+      our own** (no Supabase, no analytics, no third-party fonts), which is the policy's central
+      claim
 - [ ] The contact mailbox in the policy exists, and a test message to it arrives
 - [ ] `ARCHITECTURE.md` updated if anything about the system changed

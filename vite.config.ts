@@ -32,7 +32,15 @@ export default defineConfig(async ({ command, mode }) => {
       nitro({
         preset: "cloudflare-module",
         output: { dir: "dist", serverDir: "dist/server", publicDir: "dist/client" },
-        cloudflare: { nodeCompat: true, deployConfig: true },
+        cloudflare: {
+          nodeCompat: true,
+          deployConfig: true,
+          // Without an explicit name nitro derives one from the git remote — "owner-repo",
+          // which put the owner's personal name in the public URL. The deployed address is
+          // https://<this name>.<account subdomain>.workers.dev, and it is also the privacy
+          // policy URL given to Play, so it should read as the game and nothing else.
+          wrangler: { name: "chainreactionevolved" },
+        },
       }),
     );
   }

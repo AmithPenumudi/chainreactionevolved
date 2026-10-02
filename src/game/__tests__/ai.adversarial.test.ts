@@ -166,7 +166,9 @@ describe("adversarial AI — every action is one the engine accepts", () => {
       );
       vi.restoreAllMocks();
     }
-  });
+    // Two 120-turn four-bot arena matches take ~54s alone, which left almost no margin under
+    // the default 60s and timed out whenever the suite ran in parallel on a loaded machine.
+  }, 180_000);
 
   it("abilities mode: a bot never casts an ability it cannot pay for or target", () => {
     for (const seed of [1, 2]) {

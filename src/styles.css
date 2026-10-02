@@ -61,9 +61,9 @@
   --radius: 0.75rem;
   --background: oklch(0.16 0.01 260);
   --foreground: oklch(0.97 0.005 250);
-  --card: oklch(0.20 0.012 260);
+  --card: oklch(0.2 0.012 260);
   --card-foreground: oklch(0.97 0.005 250);
-  --popover: oklch(0.20 0.012 260);
+  --popover: oklch(0.2 0.012 260);
   --popover-foreground: oklch(0.97 0.005 250);
   --primary: oklch(0.72 0.15 235);
   --primary-foreground: oklch(0.12 0.01 260);
@@ -73,62 +73,139 @@
   --muted-foreground: oklch(0.68 0.015 260);
   --accent: oklch(0.28 0.02 260);
   --accent-foreground: oklch(0.97 0.005 250);
-  --destructive: oklch(0.65 0.20 27);
+  --destructive: oklch(0.65 0.2 27);
   --destructive-foreground: oklch(0.97 0.005 250);
-  --border: oklch(0.30 0.01 260 / 55%);
+  --border: oklch(0.3 0.01 260 / 55%);
   --input: oklch(0.28 0.01 260);
   --ring: oklch(0.72 0.15 235);
 
   /* Player colors — vibrant, clearly distinguishable, no neon. */
-  --p1: oklch(0.68 0.19 245);   /* blue */
-  --p2: oklch(0.64 0.22 27);    /* red */
-  --p3: oklch(0.76 0.19 145);   /* green */
-  --p4: oklch(0.66 0.20 305);   /* violet */
-  --p5: oklch(0.76 0.17 60);    /* orange */
-  --p6: oklch(0.80 0.14 200);   /* cyan */
-  --p7: oklch(0.74 0.18 350);   /* pink */
-  --p8: oklch(0.86 0.16 95);    /* yellow */
+  --p1: oklch(0.68 0.19 245); /* blue */
+  --p2: oklch(0.64 0.22 27); /* red */
+  --p3: oklch(0.76 0.19 145); /* green */
+  --p4: oklch(0.66 0.2 305); /* violet */
+  --p5: oklch(0.76 0.17 60); /* orange */
+  --p6: oklch(0.8 0.14 200); /* cyan */
+  --p7: oklch(0.74 0.18 350); /* pink */
+  --p8: oklch(0.86 0.16 95); /* yellow */
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
-  body { min-height: 100vh; }
+
+  /*
+   * Safe areas.
+   *
+   * targetSdk 36 means Android 15+ (API 35) draws the app under the status and gesture bars,
+   * and capacitor-src/index.html opts further in with viewport-fit=cover. Capacitor then hands
+   * the insets to the page as --safe-area-inset-* on <html> and expects CSS to deal with them;
+   * ignoring them put the header row under the status bar and the last row under the gesture
+   * pill.
+   *
+   * env() is the fallback for iOS and the plain web. Everything resolves to 0 on a device
+   * without cutouts and on Android 14 and below, where Capacitor reports no insets at all —
+   * which is exactly why this never showed up on the API 34 emulator.
+   */
+  :root {
+    --sa-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --sa-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+    --sa-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --sa-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  }
+
+  body {
+    min-height: 100vh;
+    padding: var(--sa-top) var(--sa-right) var(--sa-bottom) var(--sa-left);
+  }
+}
+
+/*
+ * Unlayered on purpose, so it beats Tailwind's own `min-h-screen` utility.
+ *
+ * Every screen asks to fill the viewport, but they now sit inside body's safe-area padding.
+ * Without subtracting it, each screen would be the full viewport height *plus* the insets, and
+ * every page would gain a strip of dead scroll the height of the system bars.
+ */
+.min-h-screen {
+  min-height: calc(100vh - var(--sa-top) - var(--sa-bottom));
 }
 
 /* Font display utility */
-.font-display { font-family: var(--font-display); letter-spacing: 0.01em; }
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+}
 
 /* Cluster rotates as a single unit — subtle, continuous. */
 @keyframes cluster-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Flying orb: travels from source cell center to neighbor cell center. */
 @keyframes orb-fly {
-  from { transform: translate(0, 0); }
-  to   { transform: translate(var(--tx), var(--ty)); }
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--tx), var(--ty));
+  }
 }
 
 /* Chain banner: minimal, no neon. */
 @keyframes combo-pop {
-  0% { transform: scale(0.8); opacity: 0; }
-  15% { transform: scale(1); opacity: 1; }
-  80% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.98); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.98);
+    opacity: 0;
+  }
 }
-.combo-banner { animation: combo-pop 1.2s ease-out forwards; }
+.combo-banner {
+  animation: combo-pop 1.2s ease-out forwards;
+}
 
 /* Shrink banner: sudden-death board contraction. */
 @keyframes shrink-flash {
-  0% { transform: scale(1.05); opacity: 0; }
-  20% { transform: scale(1); opacity: 1; }
-  80% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0; }
+  0% {
+    transform: scale(1.05);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
 }
-.shrink-banner { animation: shrink-flash 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.shrink-banner {
+  animation: shrink-flash 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}

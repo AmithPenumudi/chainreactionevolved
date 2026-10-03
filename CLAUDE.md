@@ -4,7 +4,8 @@ Turn-based grid game. Android (Capacitor) is the primary target; the same `src/`
 for web as a Cloudflare Worker.
 
 **Read `ARCHITECTURE.md` first** — it is the map of the codebase and the reasoning behind it.
-`TESTING.md` covers the test layers and the device workflow.
+`TESTING.md` covers the test layers and the device workflow, and `RELEASE.md` covers shipping to
+Play: the signed bundle, store assets, the Data safety answers and the live privacy policy URL.
 
 ## Ground rules
 
@@ -49,6 +50,8 @@ npm run lint
 npm run build:capacitor  # Android web assets
 npm run test:android     # smoke test on a running emulator/device
 npm run dashboard        # internal metrics (-- --demo for sample data)
+npm run release:android  # signed .aab for Play, signature verified
+npm run build            # web build, then: npx wrangler --cwd dist/ deploy
 ```
 
 On Windows, run Gradle from PowerShell — `gradlew.bat` fails under Git Bash.
@@ -79,3 +82,12 @@ On Windows, run Gradle from PowerShell — `gradlew.bat` fails under Git Bash.
   `npm run test:android`, which measures it on a device. Heavy fuzz tests need an explicit
   generous timeout — the four-bot arena test takes ~54s alone and timed out against the 60s
   default whenever anything else was running.
+- **Deploy the web build with `wrangler` directly, not `nitro deploy`.** nitro runs wrangler
+  through `execSync`, which mangles its interactive prompts — a subdomain prompt came back as
+  garbled echo and aborted the deploy twice. Use `npx wrangler --cwd dist/ deploy`.
+- **The worker's `compatibility_date` is pinned in `vite.config.ts`, not taken from the clock.**
+  nitro stamps the build machine's _local_ date, and Cloudflare rejects anything it considers
+  future-dated (`10021`) — from IST that is every build before 05:30. It also decides runtime
+  semantics, so it should not drift per build or per timezone.
+- **The workers.dev subdomain is permanent.** Cloudflare binds one per account, once; the API
+  refuses a change with `10036`. Only a custom domain can improve the public URL now.

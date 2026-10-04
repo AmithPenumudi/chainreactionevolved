@@ -486,14 +486,20 @@ The `service_role` key belongs only in `.env.local` (gitignored). It bypasses RL
    `GameScreen.undo.test.tsx`).
 6. **Adding puzzles must not re-lock players.** `isUnlocked` treats any later solve as proof of
    progress.
-7. **Don't rewrite pushed history.** The repo is public and has open pull requests; force-pushing,
+7. **Anything that outlives a move must capture what it describes, not read live state.**
+   `commitMove` rotates the turn the instant `animateMove` resolves, but the chain-multiplier
+   banner stays up for its 1.2s pop. Reading `currentColor` at render time therefore painted a
+   blue player's `x7` in the opponent's red partway through. The banner now carries the mover's
+   colour, captured when it is created. The same reasoning applies to any later banner, toast or
+   replay overlay.
+8. **Don't rewrite pushed history.** The repo is public and has open pull requests; force-pushing,
    rebasing or amending a pushed commit breaks review threads and anyone's checkout.
-8. **An explosion may not destroy orbs it did not eject.** Subtract `min(cm, outlets)`, never `cm`.
+9. **An explosion may not destroy orbs it did not eject.** Subtract `min(cm, outlets)`, never `cm`.
    The only sanctioned sinks are `dead` tiles and cells sealed in by walls.
-9. **Anything that keeps the turn needs a bound.** `keepTurn` with no budget is a soft-lock: the
-   opponent never moves again. See `extraPlacementCastUsed`.
-10. **`sort(() => Math.random() - 0.5)` is not a shuffle.** Use `shuffled()`.
-11. **Every merge must be commutative, including its tie-breaks and its key order.** Two devices
+10. **Anything that keeps the turn needs a bound.** `keepTurn` with no budget is a soft-lock: the
+    opponent never moves again. See `extraPlacementCastUsed`.
+11. **`sort(() => Math.random() - 0.5)` is not a shuffle.** Use `shuffled()`.
+12. **Every merge must be commutative, including its tie-breaks and its key order.** Two devices
     that disagree write to each other forever. `merge.adversarial.test.ts` fuzzes this over 200
     random pairs and asserts byte-identical results both ways round.
 

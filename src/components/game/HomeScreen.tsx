@@ -130,10 +130,6 @@ export function HomeScreen({
             </button>
           ))}
         </div>
-
-        <div className="mt-10 text-center text-[10px] tracking-[0.3em] text-muted-foreground">
-          v0.1 · PHASE 1 · LOCAL MULTIPLAYER
-        </div>
       </div>
     </div>
   );

@@ -62,7 +62,13 @@ interface AnimationState {
   explodingKeys: Set<string>;
   flying: FlyingOrb[];
   running: boolean;
-  showChainBanner: { count: number; key: number } | null;
+  /**
+   * `color` is captured when the banner is created, not read from the live turn. The banner
+   * outlives the move: `commitMove` rotates the turn as soon as `animateMove` resolves, while
+   * the banner stays up for its 1.2s pop — so reading the current player's colour made a blue
+   * player's x7 finish in red.
+   */
+  showChainBanner: { count: number; key: number; color: string } | null;
   showShrinkBanner: { key: number } | null;
 }
 
@@ -537,7 +543,13 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
 
       chain += step.explosions.length;
       const newBanner =
-        chain >= 3 ? { count: chain, key: ++bannerRef.current } : anim.showChainBanner;
+        chain >= 3
+          ? {
+              count: chain,
+              key: ++bannerRef.current,
+              color: colorFor(state.players[res.player].colorIndex),
+            }
+          : anim.showChainBanner;
       setAnim((a) => ({
         ...a,
         displayBoard: step.boardAfter,
@@ -886,7 +898,7 @@ export function GameScreen({ config, onExit, onRematch }: Props) {
                     </div>
                     <div
                       className="font-display text-5xl font-bold sm:text-7xl"
-                      style={{ color: currentColor }}
+                      style={{ color: anim.showChainBanner.color }}
                     >
                       ×{anim.showChainBanner.count}
                     </div>

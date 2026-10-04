@@ -96,6 +96,17 @@ JavaScript exception is thrown. It taps with real touch gestures, because a scri
 `element.click()` has no user activation and Chrome then skips the page's history entries,
 which makes Back behave differently from what a player sees.
 
+**Shut the emulator down when you are finished with it:**
+
+```
+adb emu kill
+```
+
+Check no `qemu-system-x86_64` process survives. This is not tidiness. An emulator left running
+had accumulated ~49,800 CPU-seconds and was saturating the machine, which made `npm test` fail
+three to four timing-sensitive tests that every one of them passed in isolation — time lost
+proving they were contention rather than regressions.
+
 **When to add a test:** any time you touch `src/game/*.ts` and the change
 affects behavior (not just visuals) — new ability, new tile type, new AI
 heuristic, new XP rule, etc. Add the case next to the existing ones for that

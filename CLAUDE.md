@@ -39,6 +39,10 @@ Play: the signed bundle, store assets, the Data safety answers and the live priv
 - **No third-party branding or credits** anywhere in the codebase, docs, commit messages or
   metadata — no build-tool attribution, no co-author trailers, no vendor marketing. This is the
   owner's project and it carries only their name.
+- **Close the emulator when you are done testing** — `adb emu kill`, and confirm no
+  `qemu-system-x86_64` process remains. A standing instruction from the project owner. One left
+  running had burned ~49,800 CPU-seconds and was starving the test suite, which then failed
+  timing-sensitive tests that passed in isolation.
 - **Verify against a build or a device, not just the suite.** The credentials-missing bug and the
   black-orb bug both passed every unit test. `npm run test:android` drives the real app.
 

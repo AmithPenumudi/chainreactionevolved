@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { APP_VERSION } from "../version";
 import { PRIVACY_CONTACT, PRIVACY_SECTIONS } from "@/content/privacy";
+import { DELETION_FACTS, DELETION_STEPS, DELETE_DATA_CONTACT } from "@/content/delete-data";
 
 const root = process.cwd();
 const read = (p: string) => readFileSync(resolve(root, p), "utf8");
@@ -102,5 +103,45 @@ describe("what the game actually sends", () => {
     const launch = /export async function syncIfSignedIn[\s\S]*?\n}/.exec(sync)?.[0] ?? "";
     expect(launch).toContain("currentUserId");
     expect(launch).not.toContain("ensureUserId");
+  });
+});
+
+describe("data deletion page", () => {
+  it("is served at a public URL and reachable from the privacy page", () => {
+    // Play requires a public "delete data" URL, separate from the privacy policy.
+    expect(read("src/routes/delete-data.tsx")).toContain("DELETION_STEPS");
+    expect(read("src/routes/delete-data.tsx")).toContain("/privacy");
+  });
+
+  it("gives steps a player can actually follow", () => {
+    expect(DELETION_STEPS.length).toBeGreaterThanOrEqual(3);
+    for (const step of DELETION_STEPS) {
+      expect(step.title.trim()).not.toBe("");
+      expect(step.detail.trim()).not.toBe("");
+    }
+    // The account is anonymous, so the request is unanswerable without the Player ID — the
+    // steps must tell the player where to find it, and Settings must actually show it.
+    const steps = DELETION_STEPS.map((s) => `${s.title} ${s.detail}`).join(" ");
+    expect(steps).toMatch(/Player ID/i);
+    expect(steps).toMatch(/Settings/i);
+    expect(read("src/components/game/SettingsScreen.tsx")).toContain("Player ID");
+    expect(read("src/components/game/SettingsScreen.tsx")).toContain("currentUserId");
+    expect(steps).toContain(DELETE_DATA_CONTACT);
+  });
+
+  it("states what is deleted, what is kept, and over what period", () => {
+    // Play asks for exactly these three, so each has to be present and non-empty.
+    const headings = DELETION_FACTS.map((f) => f.heading.toLowerCase());
+    expect(headings.some((h) => h.includes("deleted"))).toBe(true);
+    expect(headings.some((h) => h.includes("kept"))).toBe(true);
+    expect(headings.some((h) => h.includes("retention"))).toBe(true);
+    for (const fact of DELETION_FACTS) {
+      expect(fact.body.length + (fact.bullets?.length ?? 0)).toBeGreaterThan(0);
+    }
+  });
+
+  it("uses the same contact address as the privacy policy", () => {
+    // Two addresses would mean one of them silently stops being read.
+    expect(DELETE_DATA_CONTACT).toBe(PRIVACY_CONTACT);
   });
 });

@@ -17,7 +17,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { APP_ID, btn, connect, makeAdb, makeAdbBinary, sleep, bodyText } from "./lib/device.mjs";
-import { Canvas, decodePNG, encodePNG } from "./lib/png.mjs";
+import { Canvas, cropToAspect, decodePNG, encodePNG } from "./lib/png.mjs";
 
 const args = process.argv.slice(2);
 const opt = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -64,11 +64,14 @@ function capture(name) {
     sw: img.width,
     sh: height,
   });
+  // Play only counts a screenshot toward promotion eligibility at exactly 9:16; a phone capture
+  // is taller than that even after the system bars come off.
+  const framed = cropToAspect(canvas, 9 / 16);
   const file = join(outDir, `${String(++index).padStart(2, "0")}-${name}.png`);
-  const png = encodePNG(canvas);
+  const png = encodePNG(framed);
   writeFileSync(file, png);
   console.log(
-    `  ${String(index).padStart(2, "0")}  ${name.padEnd(18)} ${canvas.width}x${canvas.height}  ${(png.length / 1024).toFixed(0)} kB`,
+    `  ${String(index).padStart(2, "0")}  ${name.padEnd(18)} ${framed.width}x${framed.height}  ${(png.length / 1024).toFixed(0)} kB`,
   );
 }
 

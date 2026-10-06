@@ -1,5 +1,6 @@
 import { clearCrashLog, formatDebugInfo, getCrashLog } from "@/lib/crash-log";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { currentUserId } from "@/game/sync/client";
 import { ChainSpeed, GameSettings, useSettings } from "@/game/settings";
 import { PLAYER_COLOR_NAMES, PLAYER_COLOR_VARS, PLAYER_SYMBOLS } from "@/game/colors";
 import { APP_VERSION } from "@/lib/version";
@@ -332,6 +333,34 @@ function SupportSection({ onPrivacy }: { onPrivacy: () => void }) {
   const [count, setCount] = useState(() => getCrashLog().length);
   const [note, setNote] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
+  /**
+   * The anonymous backup id, shown so a player can actually exercise the deletion right the
+   * privacy policy grants them. Without it a deletion request is unanswerable: the account has
+   * no email and no unique name, so there is nothing to look the row up by. Null until a match
+   * has been finished, because that is when the account is created.
+   */
+  const [playerId, setPlayerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void currentUserId().then((id) => {
+      if (!cancelled) setPlayerId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const copyPlayerId = async () => {
+    if (!playerId) return;
+    try {
+      await navigator.clipboard.writeText(playerId);
+      setNote("Player ID copied");
+    } catch {
+      setReport(playerId);
+      setNote("Select the text below and copy it");
+    }
+  };
 
   const copy = async () => {
     const text = formatDebugInfo();
@@ -385,6 +414,24 @@ function SupportSection({ onPrivacy }: { onPrivacy: () => void }) {
           rows={8}
           className="w-full rounded-md border border-white/10 bg-black/30 p-2 text-[10px]"
         />
+      )}
+      {playerId && (
+        <Row
+          label="Player ID"
+          hint="Identifies your anonymous backup. Include it if you ask for your data to be deleted."
+        >
+          <div className="flex items-center gap-2">
+            <span className="max-w-[9rem] truncate font-mono text-[10px] text-muted-foreground">
+              {playerId}
+            </span>
+            <button
+              onClick={copyPlayerId}
+              className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.2em] hover:bg-white/5"
+            >
+              COPY
+            </button>
+          </div>
+        </Row>
       )}
       <Row label="Privacy policy" hint="What the game stores, and what it never collects.">
         <button

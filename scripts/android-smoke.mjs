@@ -74,6 +74,25 @@ async function main() {
     );
   });
 
+  await check("a system-delivered tap navigates and leaves the renderer responsive", async () => {
+    // Deliberately `adb shell input tap` rather than anything injected through DevTools. The
+    // document-shell freeze wedged the renderer on any genuine touch — React's event dispatch
+    // spun forever at 100% CPU — while the protocol-injected gesture this suite used elsewhere
+    // did not reproduce it at all, so a broken build passed every other check here and shipped.
+    //
+    // There is nothing to assert about the loop itself: a wedged renderer stops answering
+    // DevTools, so `evaluate` below fails on its timeout instead of returning a wrong value.
+    expect(await cdp.nativeTap(btn("/QUICK PLAY/i")), "Quick Play button not found");
+    await wait(1800);
+    expect(
+      await evaluate(`/MATCH SETUP/i.test(${text})`),
+      "a real tap did not reach Setup — the renderer is wedged, or the tap missed its target",
+    );
+    adb("shell", "input", "keyevent", "4");
+    await wait(900);
+    expect(await evaluate(`/QUICK PLAY/i.test(${text})`), "Back did not return Home");
+  });
+
   await check("Back from Setup returns Home; Back from Home would exit", async () => {
     await tap(btn("/QUICK PLAY/i"));
     await wait(800);

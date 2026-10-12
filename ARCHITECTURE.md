@@ -419,6 +419,29 @@ pipeline, bundled by nitro for Cloudflare Workers, with `src/server.ts` as the s
 `vite.capacitor.config.ts` is a plain client-only build, because Capacitor has no server to run
 SSR against. They share `src/` and nothing else, so a change to one is not a change to both.
 
+> **Trap: the Android build must not render the document shell.**
+> The root route's `shellComponent` (`src/routes/__root.tsx`) renders `<html>/<head>/<body>` for
+> the server-rendered web build, which hydrates the whole document. `capacitor-src/index.html`
+> already supplies a document, and the Android bundle mounts into the `<div id="root">` inside
+> it — so `capacitor-src/main.tsx` passes `getRouter({ documentShell: false })`.
+>
+> Rendering it in both places does not merely duplicate the `<title>`. React 19 treats `<html>`,
+> `<head>` and `<body>` as **singletons**: it adopts the document's real elements instead of
+> creating new ones, and binds its delegated event listeners to the document. The root container
+> is still that `<div>`. React's `dispatchEventForPluginEventSystem` then walks
+> `div#root -> body -> html -> #document` looking for the container its listener is bound to,
+> finds a singleton fiber, jumps to it, climbs back to the host root, resets to `div#root`, and
+> goes round again — its only exit is `container === targetContainer`, which can never hold.
+> **The first tap pins the renderer at 100% CPU forever.** No exception, no crash, nothing in
+> logcat: the page simply stops responding to taps and scrolling while the last frame stays on
+> screen. This shipped in the first closed-testing build, where it looked like "the app won't go
+> past the front page".
+>
+> It is invisible to the unit suite (jsdom renders the shell happily), and the emulator smoke
+> test did not catch it either: `npm run test:android` drives the WebView over the DevTools
+> protocol, and the freeze only ever reproduced under real touch events (`adb shell input tap`)
+> on a device. `src/__tests__/capacitor-entry.test.ts` now guards the wiring.
+
 Plugin order in the web config matters: Tailwind and path resolution, then `tanstackStart` (which
 generates the route tree), then nitro on `build` only, then `viteReact` last. The config also
 defines `import.meta.env.VITE_*` explicitly — Vite exposes those to the client automatically, but

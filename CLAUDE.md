@@ -31,6 +31,15 @@ Play: the signed bundle, store assets, the Data safety answers and the live priv
   key order.** Two devices that disagree overwrite each other forever. Period-scoped data
   (`claimed`, daily/weekly progress) must also be dropped when a side is on an older period — a
   claim carried across a rollover makes the repeated challenge id permanently unclaimable.
+- **The Android build must never render the document shell.** `capacitor-src/main.tsx` passes
+  `getRouter({ documentShell: false })`, because `capacitor-src/index.html` already supplies the
+  document and the app mounts into the `<div id="root">` inside it. Render the root route's
+  `<html>/<head>/<body>` shell there as well and React 19 adopts the real elements as
+  _singletons_, binding its delegated listeners to the document while the root container stays
+  that `<div>` — `dispatchEventForPluginEventSystem` can then never match the two and **the first
+  tap pins the renderer at 100% CPU forever**, with no exception, no crash and nothing in logcat.
+  This shipped: it was the "app won't go past the front page" bug in the first closed test. The
+  web build is server-rendered, hydrates the whole document and keeps the shell by default.
 - **Never use CSS relative colour syntax** (`oklch(from ...)`). Android WebViews are often older
   than Chrome 119. Use `lighten` / `darken` / `withAlpha` from `src/game/colors.ts`. When this
   broke, every orb rendered black while every test still passed.
@@ -44,7 +53,10 @@ Play: the signed bundle, store assets, the Data safety answers and the live priv
   running had burned ~49,800 CPU-seconds and was starving the test suite, which then failed
   timing-sensitive tests that passed in isolation.
 - **Verify against a build or a device, not just the suite.** The credentials-missing bug and the
-  black-orb bug both passed every unit test. `npm run test:android` drives the real app.
+  black-orb bug both passed every unit test. `npm run test:android` drives the real app. Note
+  that it only catches input-path failures because one check taps through
+  `adb shell input tap` — keep it that way; everything else drives the WebView from inside its
+  own debugger, which let a build that froze on every real tap pass every other check.
 
 ## Commands
 
@@ -86,6 +98,24 @@ On Windows, run Gradle from PowerShell — `gradlew.bat` fails under Git Bash.
   `npm run test:android`, which measures it on a device. Heavy fuzz tests need an explicit
   generous timeout — the four-bot arena test takes ~54s alone and timed out against the 60s
   default whenever anything else was running.
+- **`Input.synthesizeTapGesture` is dead on modern WebView.** On WebView 153 (Pixel 9 Pro) the
+  call never answers and no tap is delivered, so every scripted tap silently did nothing and the
+  smoke test would hang forever. `scripts/lib/device.mjs` uses `Input.dispatchTouchEvent`, and
+  every DevTools command there has a timeout — a renderer stuck in a loop stops servicing the
+  protocol entirely, so without one a wedged WebView looks like a hung script rather than a
+  failing test.
+- **A frozen WebView is usually spinning, not blocked — but only a sorted `top` shows it.**
+  `adb shell top -b -n 1 -o PID,...` does not sort by CPU, and reading that snapshot made an
+  infinite loop look like a deadlock and sent the first diagnosis in the wrong direction. Use
+  plain `adb shell top -b -n 1 -m 10` and look for the
+  `com.google.android.webview:sandboxed_process0` row.
+- **To find out where a wedged renderer actually is, interrupt it.** V8 honours a debugger
+  interrupt inside a tight loop, so `Debugger.pause` over CDP returns a real call stack, and
+  `Debugger.evaluateOnCallFrame` reads the locals while it sits there. That is what identified
+  the document-shell loop; nothing was ever logged.
+- **`adb shell input tap` is dropped while the screen is off.** The display timing out mid-session
+  produced a convincing but entirely false reproduction. Set `adb shell svc power stayon true`
+  (and put it back to `false` afterwards) before driving a device.
 - **Deploy the web build with `wrangler` directly, not `nitro deploy`.** nitro runs wrangler
   through `execSync`, which mangles its interactive prompts — a subdomain prompt came back as
   garbled echo and aborted the deploy twice. Use `npx wrangler --cwd dist/ deploy`.

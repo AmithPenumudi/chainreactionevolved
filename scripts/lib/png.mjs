@@ -322,3 +322,19 @@ export function decodePNG(buffer) {
 
   return { width, height, data: out };
 }
+
+/**
+ * Crops an image to an exact aspect ratio, keeping the top.
+ *
+ * Play only counts a screenshot toward promotion eligibility at exactly 16:9 or 9:16. A phone
+ * capture is usually taller than that — a 1080x2220 panel is 0.486, and 9:16 is 0.5625 — so the
+ * excess height has to go. It comes off the bottom because these screens are top-weighted: the
+ * header names the screen, and losing a little of the last row costs nothing.
+ */
+export function cropToAspect(img, ratio) {
+  const targetH = Math.round(img.width / ratio);
+  const h = Math.min(img.height, targetH);
+  const canvas = new Canvas(img.width, h);
+  canvas.drawImage(img, 0, 0, img.width, h, { sx: 0, sy: 0, sw: img.width, sh: h });
+  return canvas;
+}

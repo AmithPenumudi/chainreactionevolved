@@ -16,7 +16,10 @@ if (!browserSupportsApp()) {
   // A too-old WebView would render a blank/black page; say what to do instead.
   renderUnsupportedNotice(rootEl);
 } else {
-  const router = getRouter();
+  // No document shell: index.html already provides <html>/<head>/<body> and we mount into the
+  // <div id="root"> inside it. Rendering the shell as well freezes the WebView on the first tap
+  // — see RouterOptions.documentShell for why.
+  const router = getRouter({ documentShell: false });
   createRoot(rootEl).render(
     <StrictMode>
       <ErrorBoundary>
